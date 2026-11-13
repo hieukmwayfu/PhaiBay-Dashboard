@@ -32,7 +32,7 @@ export function Home() {
       <ErrorBox error={r.error} />
 
       <h2 className="mb-2 text-[15px] font-semibold">Tổng quan</h2>
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
         <Kpi label="Người dùng" icon="users" value={fmt(tot.users)} loading={loading} />
         <Kpi label="User mới" icon="userPlus" value={fmt(tot.new_users)} loading={loading} />
         <Kpi label="Sessions" icon="layers" value={fmt(tot.sessions)} loading={loading} />

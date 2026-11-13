@@ -206,6 +206,24 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
   const t = useTitle();
   const [agentOpen, setAgentOpenS] = useState<boolean>(storage.get("agent_open", false));
   const setAgentOpen = (v: boolean) => { setAgentOpenS(v); storage.set("agent_open", v); };
+  const [agentW, setAgentW] = useState<number>(storage.get("agent_w", 400));
+  // drag the panel's left edge to resize it
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const move = (ev: PointerEvent) =>
+      setAgentW(Math.round(Math.min(Math.max(320, window.innerWidth - ev.clientX), Math.min(900, window.innerWidth - 360))));
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      setAgentW((w) => { storage.set("agent_w", w); return w; });
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   // other pages can ask the agent something ("Nhờ AI" buttons)
   const [ask, setAsk] = useState<{ text: string; n: number } | null>(null);
   useEffect(() => {
@@ -216,10 +234,16 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
   useEffect(() => setDrawer(false), [loc.pathname]);
 
   return (
-    <div className={`min-h-screen ${collapsed ? "lg:pl-[60px]" : "lg:pl-56"} ${agentOpen ? "xl:pr-[400px]" : ""}`}>
-      {/* AI agent panel (right) */}
+    <div className={`min-h-screen ${collapsed ? "lg:pl-[60px]" : "lg:pl-56"} ${agentOpen ? "xl:pr-[var(--agent-w)]" : ""}`}
+      style={{ "--agent-w": agentW + "px" } as React.CSSProperties}>
+      {/* AI agent panel (right), resizable from its left edge */}
       {agentOpen && (
-        <aside className="fixed inset-y-0 right-0 z-40 w-full border-l border-line bg-surface shadow-pop sm:w-[400px] xl:shadow-none">
+        <aside className="fixed inset-y-0 right-0 z-40 w-full border-l border-line bg-surface shadow-pop sm:w-[var(--agent-w)] xl:shadow-none">
+          <div onPointerDown={startResize} onDoubleClick={() => { setAgentW(400); storage.set("agent_w", 400); }}
+            title="Kéo để đổi độ rộng (nhấp đúp để về mặc định)"
+            className="group absolute inset-y-0 -left-1.5 z-10 hidden w-3 cursor-col-resize sm:block">
+            <div className="mx-auto h-full w-px bg-transparent transition-colors group-hover:bg-accent/60 group-active:bg-accent" />
+          </div>
           <AgentPanel ask={ask} onClose={() => setAgentOpen(false)} />
         </aside>
       )}

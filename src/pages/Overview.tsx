@@ -49,7 +49,7 @@ export function Overview() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
         <Kpi label="Người dùng" icon="users" iconColor="#6366f1" value={fmt(t?.users)} change={delta(t?.users, p?.users)} spark={s.map((x) => x.users)} color={palette[0]} loading={loading} />
         <Kpi label="User mới" icon="userPlus" iconColor="#ec4899" value={fmt(t?.new_users)} change={delta(t?.new_users, p?.new_users)} spark={s.map((x) => x.new_users)} color={palette[0]} loading={loading} />
         <Kpi label="Sessions" icon="layers" iconColor="#8b5cf6" value={fmt(t?.sessions)} change={delta(t?.sessions, p?.sessions)} spark={s.map((x) => x.sessions)} color={palette[0]} loading={loading} />
@@ -57,7 +57,7 @@ export function Overview() {
         <Kpi label="Events / user" icon="ratio" iconColor="#10b981" value={epu != null ? epu.toFixed(1) : "–"} change={delta(epu, epuPrev)} color={palette[0]} loading={loading} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,440px),1fr))] gap-4">
         <Card title="Người dùng theo ngày" subtitle="Active users và user mới">
           <TimeChart loading={ov.loading} labels={labels} series={[
             { name: "Active users", values: s.map((x) => x.users) },
@@ -69,7 +69,7 @@ export function Overview() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4">
         {(["event", "country", "version", "platform"] as Dim[]).map((dim) => (
           <TopCard key={dim} dim={dim} onPick={(v) => addFilter({ dim, op: "eq", val: v })} />
         ))}

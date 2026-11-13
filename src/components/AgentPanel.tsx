@@ -66,6 +66,12 @@ export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text
           : <ClaudeSetup status={status} onChange={refresh} />
       )}
 
+      {status && ready && (
+        <AccountBar provider={provider} status={status}
+          onRefresh={() => agentStatus(true).then(setStatus).catch(() => {})}
+          onLogout={() => (provider === "codex" ? agentLogout("codex") : setClaudeKey("")).then(refresh)} />
+      )}
+
       {status && ready && !app && (
         <div className="p-4 text-[13px] muted">Mở một app để AI phân tích dữ liệu của app đó.</div>
       )}
@@ -85,16 +91,75 @@ export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text
           </div>
           {/* keep the chat mounted when looking at reports */}
           <div className={tab === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <Chat key={`${provider}-${app.id}`} provider={provider} appId={app.id} dates={dates} filters={q()} ask={ask} onReport={() => setTab("reports")} />
+            <Chat key={`${provider}-${app.id}`} provider={provider} appId={app.id} dates={dates} filters={q()} ask={ask} onReport={() => setTab("reports")} onDone={refresh} />
           </div>
           {tab === "reports" && <Reports appId={app.id} />}
-          <div className="shrink-0 border-t border-line px-3 py-1.5 text-[11px] muted">
-            {provider === "codex"
-              ? <>Codex · {status.codex.detail} · <button className="hover:text-fg" onClick={() => agentLogout("codex").then(refresh)}>Đăng xuất</button></>
-              : <>Claude Code · API key · <button className="hover:text-fg" onClick={() => setClaudeKey("").then(refresh)}>Xoá key</button></>}
-          </div>
         </>
       )}
+    </div>
+  );
+}
+
+const PLAN: Record<string, string> = { free: "Free", go: "Go", plus: "Plus", pro: "Pro", prolite: "Pro Lite", promax: "Pro Max", team: "Team", business: "Business", enterprise: "Enterprise", edu: "Edu" };
+
+function windowName(mins: number) {
+  if (mins >= 10020 && mins <= 10140) return "Tuần";
+  if (mins >= 1440 && mins % 1440 === 0) return mins / 1440 + " ngày";
+  if (mins >= 60) return Math.round(mins / 60) + " giờ";
+  return mins + " phút";
+}
+
+function resetIn(ts: number) {
+  const s = ts - Date.now() / 1000;
+  if (s <= 0) return "sắp reset";
+  if (s < 3600) return "reset sau " + Math.ceil(s / 60) + " phút";
+  if (s < 86400) return "reset sau " + Math.round(s / 3600) + " giờ";
+  return "reset " + new Date(ts * 1000).toLocaleString(undefined, { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Signed-in account + quota of the selected provider. */
+function AccountBar({ provider, status, onRefresh, onLogout }: { provider: Provider; status: AgentStatus; onRefresh: () => void; onLogout: () => void }) {
+  if (provider === "claude") {
+    const c = status.claude;
+    return (
+      <div className="shrink-0 space-y-1 border-b border-line px-3 py-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-fg">Claude Code</span>
+          <span className="muted">{c.version?.replace(" (Claude Code)", "")}</span>
+          <button className="ml-auto muted hover:text-fg" onClick={onLogout}>Xoá key</button>
+        </div>
+        <div className="flex items-center gap-2 muted">
+          <span className="font-mono">{c.key_hint}</span>
+          <span>· đã dùng qua PhaiBay <b className="tabular text-fg">${(c.spent_usd ?? 0).toFixed(2)}</b></span>
+        </div>
+      </div>
+    );
+  }
+  const a = status.codex.account;
+  return (
+    <div className="shrink-0 space-y-2 border-b border-line px-3 py-2.5 text-xs">
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 truncate font-medium text-fg" title={a?.email}>{a?.email ?? "ChatGPT"}</span>
+        {a?.plan && <span className="rounded border border-line px-1.5 py-px text-[11px]">{PLAN[a.plan] ?? a.plan}</span>}
+        <button className="ml-auto muted hover:text-fg" onClick={onRefresh} title="Cập nhật quota"><Icon name="refresh" size={12} /></button>
+        <button className="muted hover:text-fg" onClick={onLogout}>Đăng xuất</button>
+      </div>
+      {a?.limits.map((l) => {
+        const pct = Math.min(100, Math.max(0, l.used_percent));
+        const tone = pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent";
+        return (
+          <div key={l.name}>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="muted">Quota Codex · {windowName(l.window_mins)}</span>
+              <span className="ml-auto tabular"><b className="text-fg">{pct.toFixed(0)}%</b> <span className="muted">đã dùng</span></span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-raised"><div className={"h-full rounded-full " + tone} style={{ width: pct + "%" }} /></div>
+            <div className="mt-1 muted">{resetIn(l.resets_at)}</div>
+          </div>
+        );
+      })}
+      {a?.limit_reached && <div className="text-bad">Đã chạm giới hạn: {a.limit_reached}</div>}
+      {!a && <div className="muted">{status.codex.detail}</div>}
     </div>
   );
 }
@@ -169,8 +234,8 @@ function ClaudeSetup({ status, onChange }: { status: AgentStatus; onChange: () =
   );
 }
 
-function Chat({ provider, appId, dates, filters, onReport, ask }: {
-  provider: Provider; appId: number; dates: { from: string; to: string }; filters: Record<string, unknown>; onReport: () => void;
+function Chat({ provider, appId, dates, filters, onReport, ask, onDone }: {
+  provider: Provider; appId: number; dates: { from: string; to: string }; filters: Record<string, unknown>; onReport: () => void; onDone?: () => void;
   ask?: { text: string; n: number } | null;
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -228,6 +293,7 @@ function Chat({ provider, appId, dates, filters, onReport, ask }: {
     } finally {
       setBusy(false);
       abort.current = null;
+      onDone?.(); // quota / spend changed
     }
   };
 

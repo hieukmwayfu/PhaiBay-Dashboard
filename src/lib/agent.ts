@@ -3,9 +3,14 @@ import { api, getServerUrl, getToken } from "./api";
 
 export type Provider = "codex" | "claude";
 
+export interface CodexLimit { name: "primary" | "secondary"; used_percent: number; window_mins: number; resets_at: number }
+export interface CodexAccount {
+  type: string; email?: string; plan?: string; workspace?: string; limits: CodexLimit[];
+  credits?: { hasCredits: boolean; unlimited: boolean; balance?: string | null }; limit_reached?: string | null; fetched_at: number;
+}
 export interface AgentStatus {
-  codex: { installed: boolean; logged_in?: boolean; detail?: string; login_pending?: { url: string; code: string }; login_error?: string };
-  claude: { installed: boolean; has_key: boolean };
+  codex: { installed: boolean; logged_in?: boolean; detail?: string; account?: CodexAccount; login_pending?: { url: string; code: string }; login_error?: string };
+  claude: { installed: boolean; has_key: boolean; key_hint?: string; spent_usd?: number; version?: string };
 }
 
 export interface AgentEvent {
@@ -27,7 +32,7 @@ export interface Report {
   prompt?: string; content?: string; from: string; to: string; created_at: number;
 }
 
-export const agentStatus = () => api<AgentStatus>("/api/agent/status");
+export const agentStatus = (fresh = false) => api<AgentStatus>("/api/agent/status", fresh ? { fresh: 1 } : {});
 export const agentLogin = (provider: Provider) => api<{ url: string; code: string }>("/api/agent/login", {}, { method: "POST", body: JSON.stringify({ provider }) });
 export const agentLogout = (provider: Provider) => api("/api/agent/logout", {}, { method: "POST", body: JSON.stringify({ provider }) });
 export const setClaudeKey = (key: string) => api("/api/agent/claude-key", {}, { method: "POST", body: JSON.stringify({ key }) });
