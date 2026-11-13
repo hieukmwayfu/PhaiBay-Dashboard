@@ -9,8 +9,12 @@ export interface PCol<T> {
   sortable?: boolean;
   bar?: boolean; // inline bar proportional to the max of this column on the current page
   width?: string;
+  /** hide below this breakpoint to keep narrow layouts readable */
+  hideBelow?: "sm" | "md" | "lg" | "xl" | "2xl";
   render?: (row: T) => ReactNode;
 }
+
+const HIDE: Record<string, string> = { sm: "hidden sm:table-cell", md: "hidden md:table-cell", lg: "hidden lg:table-cell", xl: "hidden xl:table-cell", "2xl": "hidden 2xl:table-cell" };
 
 export const PAGE_SIZES = [10, 20, 50, 100];
 
@@ -20,8 +24,9 @@ export const PAGE_SIZES = [10, 20, 50, 100];
  */
 export function PagedTable<T>({
   cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
-  onSort, onPage, onPageSize, onRow, active, rowKey,
+  onSort, onPage, onPageSize, onRow, active, rowKey, compact,
 }: {
+  compact?: boolean;
   cols: PCol<T>[];
   rows: T[] | null | undefined;
   total: number;
@@ -59,7 +64,7 @@ export function PagedTable<T>({
                 return (
                   <th key={c.key} style={c.width ? { width: c.width } : undefined}
                     onClick={c.sortable ? () => onSort(c.key) : undefined}
-                    className={`select-none whitespace-nowrap px-4 py-3 ${c.num ? "text-right" : "text-left"} ${c.sortable ? "group cursor-pointer transition hover:bg-raised hover:text-fg" : ""} ${on ? "text-fg" : ""}`}>
+                    className={`select-none whitespace-nowrap ${compact ? "px-3 py-2.5" : "px-4 py-3"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right" : "text-left"} ${c.sortable ? "group cursor-pointer transition hover:bg-raised hover:text-fg" : ""} ${on ? "text-fg" : ""}`}>
                     <span className={`inline-flex items-center gap-1 ${c.num ? "flex-row-reverse" : ""}`}>
                       {c.title}
                       {c.sortable && (
@@ -75,7 +80,7 @@ export function PagedTable<T>({
           </thead>
           <tbody className="divide-y divide-line/70">
             {!rows && loading && Array.from({ length: Math.min(pageSize, 8) }, (_, i) => (
-              <tr key={i}><td colSpan={cols.length} className="px-4 py-2.5"><Skeleton className="h-5 w-full" /></td></tr>
+              <tr key={i}><td colSpan={cols.length} className="px-3 py-2"><Skeleton className="h-5 w-full" /></td></tr>
             ))}
             {rows?.map((r) => {
               const on = active?.(r);
@@ -88,14 +93,14 @@ export function PagedTable<T>({
                     if (c.bar) {
                       const w = (100 * (Number(raw) || 0)) / max[c.key];
                       return (
-                        <td key={c.key} className="relative min-w-[120px] whitespace-nowrap px-4 py-2.5 text-right tabular">
-                          <span className="absolute inset-y-2 left-2 rounded-md bg-accent/15" style={{ width: `calc(${w}% - 16px)` }} />
+                        <td key={c.key} className={`relative whitespace-nowrap text-right tabular ${compact ? "px-3 py-2" : "px-4 py-2.5"} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`} style={{ width: c.width }}>
+                          <span className="absolute inset-y-1.5 right-1.5 rounded-md bg-accent/15" style={{ width: `calc(${w}% - 12px)` }} />
                           <span className="relative font-medium">{content}</span>
                         </td>
                       );
                     }
                     return (
-                      <td key={c.key} className={`whitespace-nowrap px-4 py-2.5 ${c.num ? "text-right tabular" : ""} ${ci === 0 && on ? "font-semibold" : ""}`}>
+                      <td key={c.key} className={`whitespace-nowrap ${compact ? "px-3 py-2" : "px-4 py-2.5"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right tabular" : "max-w-0"} ${ci === 0 && on ? "font-semibold" : ""}`}>
                         {content}
                       </td>
                     );

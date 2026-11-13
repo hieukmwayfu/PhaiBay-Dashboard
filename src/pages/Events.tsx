@@ -13,10 +13,10 @@ interface EventPage { total: number; rows: EventPageRow[] }
 function ago(ms: number) {
   if (!ms) return "–";
   const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 60) return `${s}s trước`;
-  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
-  if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
-  return `${Math.floor(s / 86400)} ngày trước`;
+  if (s < 60) return `${s} giây`;
+  if (s < 3600) return `${Math.floor(s / 60)} phút`;
+  if (s < 86400) return `${Math.floor(s / 3600)} giờ`;
+  return `${Math.floor(s / 86400)} ngày`;
 }
 
 /** Debounced copy of a value (search box). */
@@ -57,19 +57,18 @@ export function Events() {
   };
 
   const cols: PCol<EventPageRow>[] = [
-    { key: "name", title: "Event", sortable: true, render: (r) => <span className="font-mono text-[13px]">{r.name}</span> },
-    { key: "count", title: "Số lần", sortable: true, num: true, bar: true, render: (r) => fmt(r.count) },
-    { key: "users", title: "Users", sortable: true, num: true, render: (r) => fmt(r.users) },
-    { key: "per_user", title: "/ user", sortable: true, num: true, render: (r) => (r.users ? (r.count / r.users).toFixed(2) : "–") },
-    { key: "last_seen", title: "Lần cuối", sortable: true, num: true, render: (r) => <span className="muted" title={new Date(r.last_seen).toLocaleString()}>{ago(r.last_seen)}</span> },
+    { key: "name", title: "Event", sortable: true, render: (r) => <span className="block truncate text-[13.5px] font-medium text-fg" title={r.name}>{r.name}</span> },
+    { key: "count", title: "Số lần", sortable: true, num: true, bar: true, width: "104px", render: (r) => fmt(r.count) },
+    { key: "users", title: "Users", sortable: true, num: true, width: "68px", render: (r) => fmt(r.users) },
+    { key: "last_seen", title: "Lần cuối", sortable: true, num: true, width: "84px", hideBelow: "sm", render: (r) => <span className="text-xs muted" title={new Date(r.last_seen).toLocaleString()}>{ago(r.last_seen)}</span> },
   ];
 
   return (
-    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
       <div className="min-w-0 space-y-2">
         <ErrorBox error={ev.error} />
         <PagedTable<EventPageRow>
-          cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
+          compact cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
           page={page} pageSize={size} sort={sort} dir={dir}
           onSort={onSort} onPage={setPage} onPageSize={setSize}
           onRow={(r) => setSel(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name}
@@ -83,7 +82,7 @@ export function Events() {
                   <div className="text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : "…"}</div>
                 </div>
               </div>
-              <div className="relative ml-auto w-full sm:w-64">
+              <div className="relative ml-auto w-full sm:w-56">
                 <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 muted" />
                 <input className="input w-full !pl-9 pr-8" placeholder="Tìm event…" value={search} onChange={(e) => setSearch(e.target.value)} />
                 {search && (
@@ -96,7 +95,10 @@ export function Events() {
           }
         />
       </div>
-      {sel ? <EventDetail name={sel} /> : <Card><Empty icon="list">Chọn 1 event</Empty></Card>}
+      {/* detail stays in view while browsing the list */}
+      <div className="min-w-0 xl:sticky xl:top-[76px]">
+        {sel ? <EventDetail name={sel} /> : <Card><Empty icon="list">Chọn 1 event</Empty></Card>}
+      </div>
     </div>
   );
 }
@@ -133,10 +135,10 @@ function EventDetail({ name }: { name: string }) {
   }, [q, name, param, numeric]);
 
   return (
-    <Card title={<span className="font-mono">{name}</span>} subtitle={ts.data ? `${fmt(ts.data.total)} lần · ${fmt(ts.data.users)} users` : " "}
+    <Card title={<span className="text-base">{name}</span>} subtitle={ts.data ? `${fmt(ts.data.total)} lần · ${fmt(ts.data.users)} users · ${ts.data.users ? (ts.data.total / ts.data.users).toFixed(2) : "–"} lần / user` : " "}
       right={<button className="btn" onClick={() => addFilter({ dim: "event", op: "eq", val: name })}><Icon name="filter" size={15} className="muted" /> Lọc theo event này</button>}>
       <ErrorBox error={ts.error || keys.error || rows.error} />
-      <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={230} />
+      <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={210} />
       <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-5">
         <span className="text-sm font-semibold">Param</span>
         <select className="input" value={param} onChange={(e) => setParam(e.target.value)}>
@@ -152,7 +154,7 @@ function EventDetail({ name }: { name: string }) {
         )}
       </div>
       <div className="mt-3">
-        <DataTable rows={rows.data} loading={rows.loading} maxHeight={420} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
+        <DataTable rows={rows.data} loading={rows.loading} maxHeight={340} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
           { key: "value", title: param || "value" },
           { key: "metric", title: metric === "users" ? "Users" : "Số lần", num: true, bar: true, render: (r) => fmt(r.metric) },
           metric === "users"
