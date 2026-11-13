@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, storage, type BreakdownRow, type ParamKey, type Timeseries } from "../lib/api";
 import { fmt } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
 import { TimeChart } from "../components/Charts";
-import { Card, DataTable, Empty, ErrorBox, Segmented } from "../components/ui";
+import { DataTable, ErrorBox, Kpi, Segmented } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { PagedTable, type PCol } from "../components/PagedTable";
 
@@ -11,12 +12,12 @@ interface EventPageRow { name: string; count: number; users: number; last_seen: 
 interface EventPage { total: number; rows: EventPageRow[] }
 
 function ago(ms: number) {
-  if (!ms) return "–";
+  if (!ms) return "—";
   const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 60) return `${s} giây`;
-  if (s < 3600) return `${Math.floor(s / 60)} phút`;
-  if (s < 86400) return `${Math.floor(s / 3600)} giờ`;
-  return `${Math.floor(s / 86400)} ngày`;
+  if (s < 60) return `${s} giây trước`;
+  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
+  if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
+  return `${Math.floor(s / 86400)} ngày trước`;
 }
 
 /** Debounced copy of a value (search box). */
@@ -29,9 +30,10 @@ function useDebounced<T>(v: T, ms = 300) {
   return d;
 }
 
+/** Event list: one full-width table (Stripe "Transactions" style). Row -> detail page. */
 export function Events() {
-  const { q } = useDash();
-  const [sel, setSel] = useState<string>("");
+  const { q, appId } = useDash();
+  const nav = useNavigate();
   const [search, setSearch] = useState("");
   const term = useDebounced(search.trim());
   const [sort, setSort] = useState("count");
@@ -47,9 +49,6 @@ export function Events() {
     () => api<EventPage>("/api/events/page", q({ q: term, sort, dir, offset: (page - 1) * size, limit: size })),
     [q, term, sort, dir, page, size],
   );
-  useEffect(() => {
-    if (!sel && ev.data?.rows.length) setSel(ev.data.rows[0].name);
-  }, [ev.data, sel]);
 
   const onSort = (k: string) => {
     if (k === sort) setDir(dir === "desc" ? "asc" : "desc");
@@ -57,55 +56,49 @@ export function Events() {
   };
 
   const cols: PCol<EventPageRow>[] = [
-    { key: "name", title: "Event", sortable: true, render: (r) => <span className="block truncate text-[13.5px] font-medium text-fg" title={r.name}>{r.name}</span> },
-    { key: "count", title: "Số lần", sortable: true, num: true, bar: true, width: "104px", render: (r) => fmt(r.count) },
-    { key: "users", title: "Users", sortable: true, num: true, width: "68px", render: (r) => fmt(r.users) },
-    { key: "last_seen", title: "Lần cuối", sortable: true, num: true, width: "84px", hideBelow: "sm", render: (r) => <span className="text-xs muted" title={new Date(r.last_seen).toLocaleString()}>{ago(r.last_seen)}</span> },
+    { key: "name", title: "Event", sortable: true, render: (r) => <span className="block truncate font-medium" title={r.name}>{r.name}</span> },
+    { key: "count", title: "Số lần", sortable: true, num: true, width: "120px", render: (r) => fmt(r.count) },
+    { key: "users", title: "Users", sortable: true, num: true, width: "110px", render: (r) => fmt(r.users) },
+    { key: "per_user", title: "Lần / user", sortable: true, num: true, width: "110px", hideBelow: "md", render: (r) => (r.users ? (r.count / r.users).toFixed(1) : "—") },
+    { key: "last_seen", title: "Lần cuối", sortable: true, num: true, width: "150px", hideBelow: "sm", render: (r) => <span className="muted" title={new Date(r.last_seen).toLocaleString()}>{ago(r.last_seen)}</span> },
   ];
 
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
-      <div className="min-w-0 space-y-2">
-        <ErrorBox error={ev.error} />
-        <PagedTable<EventPageRow>
-          compact cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
-          page={page} pageSize={size} sort={sort} dir={dir}
-          onSort={onSort} onPage={setPage} onPageSize={setSize}
-          onRow={(r) => setSel(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name}
-          emptyText={term ? `Không có event nào chứa "${term}"` : "Chưa có event"}
-          toolbar={
-            <>
-              <div className="flex items-center gap-2">
-                <div>
-                  <div className="text-[13px] font-semibold leading-tight">Tất cả events</div>
-                  <div className="text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : "…"}</div>
-                </div>
-              </div>
-              <div className="relative ml-auto w-full sm:w-56">
-                <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 muted" />
-                <input className="input w-full !pl-9 pr-8" placeholder="Tìm event…" value={search} onChange={(e) => setSearch(e.target.value)} />
-                {search && (
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 muted hover:text-fg" onClick={() => setSearch("")} aria-label="Xóa tìm kiếm">
-                    <Icon name="x" size={14} />
-                  </button>
-                )}
-              </div>
-            </>
-          }
-        />
-      </div>
-      {/* detail stays in view while browsing the list */}
-      <div className="min-w-0 xl:sticky xl:top-[76px]">
-        {sel ? <EventDetail name={sel} /> : <Card><Empty icon="list">Chọn 1 event</Empty></Card>}
-      </div>
+    <div>
+      <ErrorBox error={ev.error} />
+      <PagedTable<EventPageRow>
+        plain cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
+        page={page} pageSize={size} sort={sort} dir={dir}
+        onSort={onSort} onPage={setPage} onPageSize={setSize}
+        onRow={(r) => nav(`/app/${appId}/events/${encodeURIComponent(r.name)}`)} rowKey={(r) => r.name}
+        emptyText={term ? `Không có event nào chứa "${term}"` : "Chưa có event"}
+        toolbar={
+          <>
+            <div className="relative w-full sm:w-72">
+              <Icon name="search" size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 muted" />
+              <input className="input w-full !pl-8 pr-7" placeholder="Tìm event" value={search} onChange={(e) => setSearch(e.target.value)} />
+              {search && (
+                <button className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 muted hover:text-fg" onClick={() => setSearch("")} aria-label="Xóa tìm kiếm">
+                  <Icon name="x" size={13} />
+                </button>
+              )}
+            </div>
+            <span className="ml-auto text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : ""}</span>
+          </>
+        }
+      />
     </div>
   );
 }
 
-function EventDetail({ name }: { name: string }) {
-  const { q, addFilter } = useDash();
+/** /app/:appId/events/:name — one event: headline numbers, trend, parameter breakdown. */
+export function EventDetail() {
+  const { name: raw = "" } = useParams();
+  const name = decodeURIComponent(raw);
+  const { q, addFilter, appId } = useDash();
   const [param, setParam] = useState("");
   const [metric, setMetric] = useState("count");
+
   const ts = useLoad(async () => {
     const [c, u] = await Promise.all([
       api<Timeseries>("/api/timeseries", q({ event: name, metric: "count" }, ["event"])),
@@ -132,35 +125,69 @@ function EventDetail({ name }: { name: string }) {
     ]);
     return { sum: s[0]?.metric ?? 0, avg: a[0]?.metric ?? 0 };
   }, [q, name, param, numeric]);
+  const loading = ts.loading && !ts.data;
 
   return (
-    <Card title={<span className="text-base">{name}</span>} subtitle={ts.data ? `${fmt(ts.data.total)} lần · ${fmt(ts.data.users)} users · ${ts.data.users ? (ts.data.total / ts.data.users).toFixed(2) : "–"} lần / user` : " "}
-      right={<button className="btn" onClick={() => addFilter({ dim: "event", op: "eq", val: name })}><Icon name="filter" size={15} className="muted" /> Lọc theo event này</button>}>
+    <div className="space-y-6">
+      <div>
+        <Link to={`/app/${appId}/events`} className="inline-flex items-center gap-1 text-[13px] muted hover:text-fg">
+          <Icon name="back" size={14} /> Events
+        </Link>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <h2 className="text-[18px] font-semibold">{name}</h2>
+          <button className="btn ml-auto" onClick={() => addFilter({ dim: "event", op: "eq", val: name })}>
+            <Icon name="filter" size={14} className="muted" /> Lọc dashboard theo event này
+          </button>
+        </div>
+      </div>
+
       <ErrorBox error={ts.error || keys.error || rows.error} />
-      <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={210} />
-      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-5">
-        <span className="text-sm font-semibold">Param</span>
-        <select className="input" value={param} onChange={(e) => setParam(e.target.value)}>
-          {(keys.data ?? []).map((k) => <option key={k.key} value={k.key}>{k.key}{k.numeric ? " (số)" : ""}</option>)}
-          {!keys.data?.length && <option value="">(không có param)</option>}
-        </select>
-        <Segmented value={metric} onChange={setMetric} options={[{ v: "count", label: "Số lần" }, { v: "users", label: "Users" }]} />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Kpi label="Số lần" icon="bolt" value={fmt(ts.data?.total)} loading={loading} />
+        <Kpi label="Users" icon="users" value={fmt(ts.data?.users)} loading={loading} />
+        <Kpi label="Lần / user" icon="ratio" value={ts.data?.users ? (ts.data.total / ts.data.users).toFixed(1) : "—"} loading={loading} />
+      </div>
+
+      <section>
+        <h3 className="mb-3 text-[15px] font-semibold">Theo ngày</h3>
+        <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={240} />
+      </section>
+
+      <section>
+        <div className="flex flex-wrap items-end gap-3 border-b border-line">
+          <h3 className="mb-2 mr-2 text-[15px] font-semibold">Parameter</h3>
+          {/* Plane-style underline tabs, one per parameter */}
+          <nav className="-mb-px flex min-w-0 flex-1 gap-4 overflow-x-auto">
+            {(keys.data ?? []).map((k) => (
+              <button key={k.key} onClick={() => setParam(k.key)}
+                className={`whitespace-nowrap border-b-2 pb-2 text-[13px] transition-colors ${k.key === param ? "border-accent font-medium text-fg" : "border-transparent muted hover:text-fg"}`}>
+                {k.key}
+              </button>
+            ))}
+            {keys.data && keys.data.length === 0 && <span className="pb-2 text-[13px] muted">Event này không có parameter</span>}
+          </nav>
+          <div className="mb-2"><Segmented value={metric} onChange={setMetric} options={[{ v: "count", label: "Số lần" }, { v: "users", label: "Users" }]} /></div>
+        </div>
         {stats.data && (
-          <span className="ml-auto flex gap-2">
-            <span className="chip">Tổng <b className="tabular">{fmt(stats.data.sum)}</b></span>
-            <span className="chip">TB <b className="tabular">{fmt(stats.data.avg)}</b></span>
-          </span>
+          <div className="mt-3 flex gap-6 text-[13px]">
+            <span><span className="muted">Tổng </span><b className="tabular">{fmt(stats.data.sum)}</b></span>
+            <span><span className="muted">Trung bình </span><b className="tabular">{fmt(stats.data.avg)}</b></span>
+          </div>
         )}
-      </div>
-      <div className="mt-3">
-        <DataTable rows={rows.data} loading={rows.loading} maxHeight={340} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
-          { key: "value", title: param || "value" },
-          { key: "metric", title: metric === "users" ? "Users" : "Số lần", num: true, bar: true, render: (r) => fmt(r.metric) },
-          metric === "users"
-            ? { key: "count", title: "Số lần", num: true, render: (r) => fmt(r.count) }
-            : { key: "users", title: "Users", num: true, render: (r) => fmt(r.users) },
-        ]} />
-      </div>
-    </Card>
+        {param && (
+          <div className="mt-2">
+            <DataTable rows={rows.data} loading={rows.loading} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
+              { key: "value", title: param },
+              { key: "metric", title: metric === "users" ? "Users" : "Số lần", num: true, bar: true, render: (r) => fmt(r.metric) },
+              metric === "users"
+                ? { key: "count", title: "Số lần", num: true, render: (r) => fmt(r.count) }
+                : { key: "users", title: "Users", num: true, render: (r) => fmt(r.users) },
+            ]} />
+            {rows.data && rows.data.length > 0 && <p className="mt-2 text-xs muted">{rows.data.length} giá trị · bấm 1 dòng để lọc dashboard theo giá trị đó</p>}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

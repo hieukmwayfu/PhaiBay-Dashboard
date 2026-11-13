@@ -8,7 +8,7 @@ import { ErrorBox } from "./components/ui";
 import { Login } from "./pages/Login";
 import { Home } from "./pages/Home";
 import { Overview } from "./pages/Overview";
-import { Events } from "./pages/Events";
+import { EventDetail, Events } from "./pages/Events";
 import { Explore } from "./pages/Explore";
 import { Funnel } from "./pages/Funnel";
 import { Debug } from "./pages/Debug";
@@ -31,6 +31,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
         <Route path="app/:appId" element={<AppScope />}>
           <Route index element={<Overview />} />
           <Route path="events" element={<Events />} />
+          <Route path="events/:name" element={<EventDetail />} />
           <Route path="explore" element={<Explore />} />
           <Route path="funnel" element={<Funnel />} />
           <Route path="debug" element={<Debug />} />

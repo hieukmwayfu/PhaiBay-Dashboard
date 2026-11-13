@@ -19,14 +19,16 @@ const HIDE: Record<string, string> = { sm: "hidden sm:table-cell", md: "hidden m
 export const PAGE_SIZES = [10, 20, 50, 100];
 
 /**
- * Server-paged table (mobilehub style): toolbar slot, sortable gray header, divided rows,
+ * Server-paged table: toolbar slot, sortable gray header, divided rows,
  * footer with rows-per-page, range and first / prev / page x of y / next / last.
  */
 export function PagedTable<T>({
   cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
-  onSort, onPage, onPageSize, onRow, active, rowKey, compact,
+  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain,
 }: {
   compact?: boolean;
+  /** no frame: table sits directly on the page (Stripe list style) */
+  plain?: boolean;
   cols: PCol<T>[];
   rows: T[] | null | undefined;
   total: number;
@@ -51,12 +53,12 @@ export function PagedTable<T>({
   for (const c of cols) if (c.bar) max[c.key] = Math.max(1, ...(rows ?? []).map((r) => Number((r as Record<string, unknown>)[c.key]) || 0));
 
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface">
-      {toolbar && <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">{toolbar}</div>}
+    <div className={plain ? "" : "overflow-hidden rounded-lg border border-line bg-surface"}>
+      {toolbar && <div className={`flex flex-wrap items-center gap-2 ${plain ? "pb-3" : "border-b border-line p-3"}`}>{toolbar}</div>}
 
-      <div className="relative overflow-x-auto">
+      <div className={`relative overflow-x-auto ${plain ? "-mx-3" : ""}`}>
         {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-accent/50" />}
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px]">
           <thead className="border-b border-line text-xs font-medium muted">
             <tr>
               {cols.map((c) => {
@@ -64,7 +66,7 @@ export function PagedTable<T>({
                 return (
                   <th key={c.key} style={c.width ? { width: c.width } : undefined}
                     onClick={c.sortable ? () => onSort(c.key) : undefined}
-                    className={`select-none whitespace-nowrap ${compact ? "px-3 py-2.5" : "px-4 py-3"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right" : "text-left"} ${c.sortable ? "group cursor-pointer transition hover:bg-raised hover:text-fg" : ""} ${on ? "text-fg" : ""}`}>
+                    className={`select-none whitespace-nowrap ${plain ? "px-3 py-2" : compact ? "px-3 py-2.5" : "px-4 py-3"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right" : "text-left"} ${c.sortable ? "group cursor-pointer transition hover:bg-raised hover:text-fg" : ""} ${on ? "text-fg" : ""}`}>
                     <span className={`inline-flex items-center gap-1 ${c.num ? "flex-row-reverse" : ""}`}>
                       {c.title}
                       {c.sortable && (
@@ -78,7 +80,7 @@ export function PagedTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-line/70">
+          <tbody className="divide-y divide-line/70 border-b border-line/70">
             {!rows && loading && Array.from({ length: Math.min(pageSize, 8) }, (_, i) => (
               <tr key={i}><td colSpan={cols.length} className="px-3 py-2"><Skeleton className="h-5 w-full" /></td></tr>
             ))}
@@ -102,7 +104,7 @@ export function PagedTable<T>({
                       );
                     }
                     return (
-                      <td key={c.key} className={`whitespace-nowrap ${compact ? "px-3 py-2" : "px-4 py-2.5"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right tabular" : "max-w-0"} ${ci === 0 && on ? "font-semibold" : ""}`}>
+                      <td key={c.key} className={`whitespace-nowrap ${plain ? "px-3 py-2.5" : compact ? "px-3 py-2" : "px-4 py-2.5"} ${c.hideBelow ? HIDE[c.hideBelow] : ""} ${c.num ? "text-right tabular" : "max-w-0"} ${ci === 0 && on ? "font-semibold" : ""}`}>
                         {content}
                       </td>
                     );
@@ -115,7 +117,7 @@ export function PagedTable<T>({
         {rows && rows.length === 0 && <Empty>{emptyText}</Empty>}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm">
+      <div className={`flex flex-wrap items-center justify-between gap-3 text-[13px] ${plain ? "border-t border-line pt-3" : "border-t border-line px-4 py-3"}`}>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 muted">
             <span className="hidden sm:inline">Số dòng / trang</span>
