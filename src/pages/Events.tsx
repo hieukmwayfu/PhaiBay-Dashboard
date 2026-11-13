@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, storage, type BreakdownRow, type ParamKey, type Timeseries } from "../lib/api";
 import { fmt } from "../lib/format";
@@ -33,7 +33,8 @@ function useDebounced<T>(v: T, ms = 300) {
 /** Event list: one full-width table (Stripe "Transactions" style). Row -> detail page. */
 export function Events() {
   const { q } = useDash();
-  const [open, setOpen] = useState<string | null>(null); // expanded event
+  const [sel, setSel] = useState<string | null>(null); // event shown in the bottom panel
+  const detailRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const term = useDebounced(search.trim());
   const [sort, setSort] = useState("count");
@@ -50,6 +51,18 @@ export function Events() {
     [q, term, sort, dir, page, size],
   );
 
+  // default selection: first row of the list (kept while it is still listed)
+  useEffect(() => {
+    const rows = ev.data?.rows ?? [];
+    if (rows.length && (!sel || !rows.some((r) => r.name === sel))) setSel(rows[0].name);
+  }, [ev.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pick = (name: string) => {
+    setSel(name);
+    const el = detailRef.current;
+    if (el && el.getBoundingClientRect().top > window.innerHeight - 120) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const onSort = (k: string) => {
     if (k === sort) setDir(dir === "desc" ? "asc" : "desc");
     else { setSort(k); setDir(k === "name" ? "asc" : "desc"); }
@@ -58,7 +71,7 @@ export function Events() {
   const cols: PCol<EventPageRow>[] = [
     { key: "name", title: "Event", sortable: true, render: (r) => (
       <span className="flex min-w-0 items-center gap-1.5" title={r.name}>
-        <Icon name="chevron" size={13} className={`shrink-0 muted transition-transform ${open === r.name ? "rotate-90" : ""}`} />
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sel === r.name ? "bg-accent" : "bg-transparent"}`} />
         <span className="truncate font-medium">{r.name}</span>
       </span>
     ) },
@@ -75,8 +88,7 @@ export function Events() {
         plain cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
         page={page} pageSize={size} sort={sort} dir={dir}
         onSort={onSort} onPage={setPage} onPageSize={setSize}
-        onRow={(r) => setOpen(open === r.name ? null : r.name)} active={(r) => r.name === open} rowKey={(r) => r.name}
-        expanded={(r) => (r.name === open ? <EventBody name={r.name} inline /> : null)}
+        onRow={(r) => pick(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name} maxBodyHeight={372}
         emptyText={term ? `Không có event nào chứa "${term}"` : "Chưa có event"}
         toolbar={
           <>
@@ -93,6 +105,21 @@ export function Events() {
           </>
         }
       />
+
+      {/* bottom: detail of the selected event */}
+      <div ref={detailRef} className="mt-8 scroll-mt-4 border-t border-line pt-6">
+        {sel ? (
+          <>
+            <div className="mb-4 flex items-baseline gap-2">
+              <span className="text-xs muted">Chi tiết event</span>
+              <h2 className="text-[18px] font-semibold">{sel}</h2>
+            </div>
+            <EventBody key={sel} name={sel} inline />
+          </>
+        ) : (
+          !ev.loading && <p className="text-[13px] muted">Chọn một event ở danh sách phía trên để xem chi tiết.</p>
+        )}
+      </div>
     </div>
   );
 }

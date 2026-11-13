@@ -24,8 +24,10 @@ export const PAGE_SIZES = [10, 20, 50, 100];
  */
 export function PagedTable<T>({
   cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
-  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain, expanded,
+  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain, expanded, maxBodyHeight,
 }: {
+  /** scroll the rows inside this height (header stays visible) */
+  maxBodyHeight?: number;
   /** content shown in a full-width row right under a row (accordion); null = collapsed */
   expanded?: (r: T) => ReactNode | null;
   compact?: boolean;
@@ -58,10 +60,10 @@ export function PagedTable<T>({
     <div className={plain ? "" : "overflow-hidden rounded-lg border border-line bg-surface"}>
       {toolbar && <div className={`flex flex-wrap items-center gap-2 ${plain ? "pb-3" : "border-b border-line p-3"}`}>{toolbar}</div>}
 
-      <div className={`relative overflow-x-auto ${plain ? "-mx-3" : ""}`}>
+      <div className={`relative overflow-x-auto ${maxBodyHeight ? "overflow-y-auto" : ""} ${plain ? "-mx-3" : ""}`} style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}>
         {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-accent/50" />}
         <table className="w-full text-[13px]">
-          <thead className="border-b border-line text-xs font-medium muted">
+          <thead className="sticky top-0 z-10 bg-surface text-xs font-medium muted shadow-[inset_0_-1px_0_rgb(var(--line))]">
             <tr>
               {cols.map((c) => {
                 const on = sort === c.key;
