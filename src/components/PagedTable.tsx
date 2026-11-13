@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { Empty, Skeleton } from "./ui";
 
@@ -24,8 +24,10 @@ export const PAGE_SIZES = [10, 20, 50, 100];
  */
 export function PagedTable<T>({
   cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
-  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain,
+  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain, expanded,
 }: {
+  /** content shown in a full-width row right under a row (accordion); null = collapsed */
+  expanded?: (r: T) => ReactNode | null;
   compact?: boolean;
   /** no frame: table sits directly on the page (Stripe list style) */
   plain?: boolean;
@@ -86,8 +88,10 @@ export function PagedTable<T>({
             ))}
             {rows?.map((r) => {
               const on = active?.(r);
+              const extra = expanded?.(r);
               return (
-                <tr key={rowKey(r)} onClick={onRow ? () => onRow(r) : undefined}
+                <Fragment key={rowKey(r)}>
+                <tr onClick={onRow ? () => onRow(r) : undefined}
                   className={`${onRow ? "cursor-pointer" : ""} ${on ? "bg-raised" : "hover:bg-raised/70"} transition-colors`}>
                   {cols.map((c, ci) => {
                     const raw = (r as Record<string, unknown>)[c.key];
@@ -110,6 +114,12 @@ export function PagedTable<T>({
                     );
                   })}
                 </tr>
+                {extra && (
+                  <tr>
+                    <td colSpan={cols.length} className="border-l-2 border-accent/60 px-3 pb-6 pt-4 sm:px-5">{extra}</td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
