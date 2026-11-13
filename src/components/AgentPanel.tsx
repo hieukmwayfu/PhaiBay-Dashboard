@@ -8,6 +8,7 @@ import {
 import { Icon } from "./Icon";
 import { Markdown } from "./Markdown";
 import { CopyButton, ErrorBox, Loading, Segmented } from "./ui";
+import { DASHBOARDS_CHANGED } from "../lib/dashboards";
 
 interface ToolStep { id: string; name: string; args?: unknown; done: boolean; ok: boolean }
 interface Msg { role: "user" | "assistant"; text: string; tools: ToolStep[]; error?: string; report?: { id: number; title: string } }
@@ -22,7 +23,7 @@ const QUICK = [
 const ANALYZE_PROMPT = "Phân tích toàn diện app trong khoảng ngày đang xem.";
 
 /** Right-side AI agent panel: Codex / Claude Code with PhaiBay MCP tools, chat (not stored) + saved analyses. */
-export function AgentPanel({ onClose }: { onClose: () => void }) {
+export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text: string; n: number } | null }) {
   const { apps, appId, dates, q } = useDash();
   const app = apps.find((a) => a.id === appId);
   const [provider, setProviderS] = useState<Provider>(storage.get("agent_provider", "codex"));
@@ -32,6 +33,7 @@ export function AgentPanel({ onClose }: { onClose: () => void }) {
   const [err, setErr] = useState("");
 
   const refresh = () => agentStatus().then(setStatus).catch((e: Error) => setErr(e.message));
+  useEffect(() => { if (ask) setTab("chat"); }, [ask?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, []);
 
   // poll while a Codex device login is pending
@@ -83,7 +85,7 @@ export function AgentPanel({ onClose }: { onClose: () => void }) {
           </div>
           {/* keep the chat mounted when looking at reports */}
           <div className={tab === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <Chat key={`${provider}-${app.id}`} provider={provider} appId={app.id} dates={dates} filters={q()} onReport={() => setTab("reports")} />
+            <Chat key={`${provider}-${app.id}`} provider={provider} appId={app.id} dates={dates} filters={q()} ask={ask} onReport={() => setTab("reports")} />
           </div>
           {tab === "reports" && <Reports appId={app.id} />}
           <div className="shrink-0 border-t border-line px-3 py-1.5 text-[11px] muted">
@@ -167,8 +169,9 @@ function ClaudeSetup({ status, onChange }: { status: AgentStatus; onChange: () =
   );
 }
 
-function Chat({ provider, appId, dates, filters, onReport }: {
+function Chat({ provider, appId, dates, filters, onReport, ask }: {
   provider: Provider; appId: number; dates: { from: string; to: string }; filters: Record<string, unknown>; onReport: () => void;
+  ask?: { text: string; n: number } | null;
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [thread, setThread] = useState<string | undefined>();
@@ -177,6 +180,12 @@ function Chat({ provider, appId, dates, filters, onReport }: {
   const abort = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [msgs]);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!ask) return;
+    setInput(ask.text);
+    setTimeout(() => { const el = inputRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 50);
+  }, [ask?.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = async (text: string, mode: "chat" | "analyze") => {
     text = text.trim();
@@ -204,6 +213,7 @@ function Chat({ provider, appId, dates, filters, onReport }: {
             const i = reply.tools.findIndex((t) => t.id === e.id);
             const step = { id: e.id ?? String(reply.tools.length), name: e.name ?? "tool", args: e.args, done: !!e.done, ok: e.status !== "failed" };
             if (i >= 0) reply.tools[i] = step; else reply.tools.push(step);
+            if (step.done && step.ok && step.name === "save_dashboard") window.dispatchEvent(new Event(DASHBOARDS_CHANGED));
             update();
             break;
           }
@@ -266,7 +276,7 @@ function Chat({ provider, appId, dates, filters, onReport }: {
       </div>
       <div className="shrink-0 border-t border-line p-3">
         <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); send(input, "chat"); }}>
-          <textarea className="input min-h-[36px] flex-1 resize-none py-2 leading-snug" rows={2} value={input}
+          <textarea ref={inputRef} className="input min-h-[36px] flex-1 resize-none py-2 leading-snug" rows={2} value={input}
             placeholder="Hỏi về dữ liệu… (Enter gửi)" onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input, "chat"); } }} />
           {busy

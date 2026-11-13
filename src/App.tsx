@@ -12,6 +12,7 @@ import { EventDetail, Events } from "./pages/Events";
 import { Explore } from "./pages/Explore";
 import { Funnel } from "./pages/Funnel";
 import { Debug } from "./pages/Debug";
+import { Dashboards } from "./pages/Dashboards";
 
 function Shell({ onLogout }: { onLogout: () => void }) {
   const { setApps } = useDash();
@@ -32,6 +33,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
           <Route path="events/:name" element={<EventDetail />} />
           <Route path="explore" element={<Explore />} />
           <Route path="funnel" element={<Funnel />} />
+          <Route path="dashboards" element={<Dashboards />} />
           <Route path="debug" element={<Debug />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

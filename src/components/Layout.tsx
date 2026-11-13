@@ -11,6 +11,7 @@ export const APP_NAV: { to: string; label: string; icon: IconName; end?: boolean
   { to: "events", label: "Events", icon: "list" },
   { to: "explore", label: "Explore", icon: "compass" },
   { to: "funnel", label: "Funnel", icon: "funnel" },
+  { to: "dashboards", label: "Dashboards", icon: "grid" },
   { to: "debug", label: "DebugView", icon: "pulse" },
 ];
 
@@ -205,6 +206,13 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
   const t = useTitle();
   const [agentOpen, setAgentOpenS] = useState<boolean>(storage.get("agent_open", false));
   const setAgentOpen = (v: boolean) => { setAgentOpenS(v); storage.set("agent_open", v); };
+  // other pages can ask the agent something ("Nhờ AI" buttons)
+  const [ask, setAsk] = useState<{ text: string; n: number } | null>(null);
+  useEffect(() => {
+    const h = (e: Event) => { setAgentOpen(true); setAsk({ text: String((e as CustomEvent).detail ?? ""), n: Date.now() }); };
+    window.addEventListener("pb-agent-ask", h);
+    return () => window.removeEventListener("pb-agent-ask", h);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => setDrawer(false), [loc.pathname]);
 
   return (
@@ -212,7 +220,7 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
       {/* AI agent panel (right) */}
       {agentOpen && (
         <aside className="fixed inset-y-0 right-0 z-40 w-full border-l border-line bg-surface shadow-pop sm:w-[400px] xl:shadow-none">
-          <AgentPanel onClose={() => setAgentOpen(false)} />
+          <AgentPanel ask={ask} onClose={() => setAgentOpen(false)} />
         </aside>
       )}
       {/* desktop sidebar */}
