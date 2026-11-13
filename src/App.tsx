@@ -12,7 +12,6 @@ import { EventDetail, Events } from "./pages/Events";
 import { Explore } from "./pages/Explore";
 import { Funnel } from "./pages/Funnel";
 import { Debug } from "./pages/Debug";
-import { AppSetup } from "./pages/AppSetup";
 import { Ai } from "./pages/Ai";
 
 function Shell({ onLogout }: { onLogout: () => void }) {
@@ -36,7 +35,6 @@ function Shell({ onLogout }: { onLogout: () => void }) {
           <Route path="funnel" element={<Funnel />} />
           <Route path="debug" element={<Debug />} />
           <Route path="ai" element={<Ai />} />
-          <Route path="setup" element={<AppSetup />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

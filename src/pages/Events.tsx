@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, storage, type BreakdownRow, type ParamKey, type Timeseries } from "../lib/api";
+import { api, type BreakdownRow, type ParamKey, type Timeseries } from "../lib/api";
 import { fmt } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
 import { TimeChart } from "../components/Charts";
-import { DataTable, ErrorBox, Kpi, Segmented } from "../components/ui";
+import { DataTable, ErrorBox, Loading, Segmented } from "../components/ui";
 import { Icon } from "../components/Icon";
 import { PagedTable, type PCol } from "../components/PagedTable";
 
 interface EventPageRow { name: string; count: number; users: number; last_seen: number }
 interface EventPage { total: number; rows: EventPageRow[] }
+
+const CHUNK = 50; // events fetched per scroll step
 
 function ago(ms: number) {
   if (!ms) return "—";
@@ -30,32 +32,57 @@ function useDebounced<T>(v: T, ms = 300) {
   return d;
 }
 
-/** Event list: one full-width table (Stripe "Transactions" style). Row -> detail page. */
+/** Events: list on top (scrolls, loads more at the end), selected event's detail below. */
 export function Events() {
-  const { q } = useDash();
+  const { q, version } = useDash();
   const [sel, setSel] = useState<string | null>(null); // event shown in the bottom panel
   const detailRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const term = useDebounced(search.trim());
   const [sort, setSort] = useState("count");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [size, setSizeS] = useState<number>(storage.get("events_page_size", 20));
-  const setSize = (n: number) => { setSizeS(n); storage.set("events_page_size", n); setPage(1); };
 
-  // back to page 1 whenever the result set changes
-  useEffect(() => setPage(1), [q, term, sort, dir]);
+  // infinite list state
+  const [rows, setRows] = useState<EventPageRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const gen = useRef(0); // drops responses of an outdated query
+  const busy = useRef(false); // scroll events fire in bursts: one request at a time
 
-  const ev = useLoad(
-    () => api<EventPage>("/api/events/page", q({ q: term, sort, dir, offset: (page - 1) * size, limit: size })),
-    [q, term, sort, dir, page, size],
-  );
+  const load = useCallback(async (offset: number, replace: boolean) => {
+    if (busy.current && !replace) return;
+    const my = replace ? ++gen.current : gen.current;
+    busy.current = true;
+    setLoading(true);
+    setError("");
+    try {
+      const r = await api<EventPage>("/api/events/page", q({ q: term, sort, dir, offset, limit: CHUNK }));
+      if (my !== gen.current) return;
+      setTotal(r.total);
+      setRows((prev) => {
+        if (replace || !prev) return r.rows;
+        const seen = new Set(prev.map((x) => x.name));
+        return [...prev, ...r.rows.filter((x) => !seen.has(x.name))];
+      });
+    } catch (e) {
+      if (my === gen.current) setError((e as Error).message);
+    } finally {
+      if (my === gen.current) { setLoading(false); busy.current = false; }
+    }
+  }, [q, term, sort, dir]);
 
-  // default selection: first row of the list (kept while it is still listed)
+  // new query (filters, dates, search, sort, refresh): start over
+  useEffect(() => { load(0, true); }, [load, version]);
+
+  const more = () => {
+    if (!loading && rows && rows.length < total) load(rows.length, false);
+  };
+
+  // default selection: first event (kept while it is still listed)
   useEffect(() => {
-    const rows = ev.data?.rows ?? [];
-    if (rows.length && (!sel || !rows.some((r) => r.name === sel))) setSel(rows[0].name);
-  }, [ev.data]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (rows?.length && (!sel || !rows.some((r) => r.name === sel))) setSel(rows[0].name);
+  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (name: string) => {
     setSel(name);
@@ -83,13 +110,21 @@ export function Events() {
 
   return (
     <div>
-      <ErrorBox error={ev.error} />
+      <ErrorBox error={error} />
       <PagedTable<EventPageRow>
-        plain cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
-        page={page} pageSize={size} sort={sort} dir={dir}
-        onSort={onSort} onPage={setPage} onPageSize={setSize}
-        onRow={(r) => pick(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name} maxBodyHeight={372}
+        plain cols={cols} rows={rows} total={total} loading={loading}
+        page={1} pageSize={Math.max(CHUNK, rows?.length ?? 0)} sort={sort} dir={dir}
+        onSort={onSort} onPage={() => {}} onPageSize={() => {}}
+        onRow={(r) => pick(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name}
+        maxBodyHeight={372} onReachEnd={more}
         emptyText={term ? `Không có event nào chứa "${term}"` : "Chưa có event"}
+        footer={
+          <div className="flex items-center gap-2 border-t border-line pt-2 text-xs muted">
+            {rows && <span>Hiển thị {rows.length.toLocaleString()} / {total.toLocaleString()} event</span>}
+            {rows && rows.length < total && !loading && <button className="hover:text-fg" onClick={more}>· Tải thêm</button>}
+            <Loading on={loading} />
+          </div>
+        }
         toolbar={
           <>
             <div className="relative w-full sm:w-72">
@@ -101,47 +136,38 @@ export function Events() {
                 </button>
               )}
             </div>
-            <span className="ml-auto text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : ""}</span>
+            <span className="ml-auto text-xs muted">{rows ? `${total.toLocaleString()} loại event` : ""}</span>
           </>
         }
       />
 
       {/* bottom: detail of the selected event */}
-      <div ref={detailRef} className="mt-8 scroll-mt-4 border-t border-line pt-6">
-        {sel ? (
-          <>
-            <div className="mb-4 flex items-baseline gap-2">
-              <span className="text-xs muted">Chi tiết event</span>
-              <h2 className="text-[18px] font-semibold">{sel}</h2>
-            </div>
-            <EventBody key={sel} name={sel} inline />
-          </>
-        ) : (
-          !ev.loading && <p className="text-[13px] muted">Chọn một event ở danh sách phía trên để xem chi tiết.</p>
+      <div ref={detailRef} className="mt-6 scroll-mt-4 border-t border-line pt-5">
+        {sel ? <EventBody key={sel} name={sel} inline /> : (
+          !loading && <p className="text-[13px] muted">Chọn một event ở danh sách phía trên để xem chi tiết.</p>
         )}
       </div>
     </div>
   );
 }
 
-/** /app/:appId/events/:name — same content as the inline panel, as its own page (deep link). */
+/** /app/:appId/events/:name — same content as the panel, as its own page (deep link). */
 export function EventDetail() {
   const { name: raw = "" } = useParams();
   const { appId } = useDash();
   return (
     <div>
-      <Link to={`/app/${appId}/events`} className="inline-flex items-center gap-1 text-[13px] muted hover:text-fg">
+      <Link to={`/app/${appId}/events`} className="mb-3 inline-flex items-center gap-1 text-[13px] muted hover:text-fg">
         <Icon name="back" size={14} /> Events
       </Link>
-      <h2 className="mb-5 mt-1 text-[18px] font-semibold">{decodeURIComponent(raw)}</h2>
       <EventBody name={decodeURIComponent(raw)} />
     </div>
   );
 }
 
-/** One event: headline numbers, daily trend, parameter tabs with value breakdown. */
+/** One event: name + headline numbers, parameter breakdown first, daily trend last. */
 function EventBody({ name, inline }: { name: string; inline?: boolean }) {
-  const { q, addFilter, appId } = useDash();
+  const { q, addFilter } = useDash();
   const [param, setParam] = useState("");
   const [metric, setMetric] = useState("count");
 
@@ -171,35 +197,25 @@ function EventBody({ name, inline }: { name: string; inline?: boolean }) {
     ]);
     return { sum: s[0]?.metric ?? 0, avg: a[0]?.metric ?? 0 };
   }, [q, name, param, numeric]);
-  const loading = ts.loading && !ts.data;
 
   return (
-    <div className={inline ? "space-y-5" : "space-y-6"}>
+    <div className="space-y-6">
       <ErrorBox error={ts.error || keys.error || rows.error} />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className={`grid w-full grid-cols-1 gap-3 sm:grid-cols-3 lg:flex-1 ${inline ? "lg:max-w-3xl" : ""}`}>
-          <Kpi label="Số lần" icon="bolt" value={fmt(ts.data?.total)} loading={loading} />
-          <Kpi label="Users" icon="users" value={fmt(ts.data?.users)} loading={loading} />
-          <Kpi label="Lần / user" icon="ratio" value={ts.data?.users ? (ts.data.total / ts.data.users).toFixed(1) : "—"} loading={loading} />
+      {/* name + compact numbers on one line */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <h2 className="text-[18px] font-semibold">{name}</h2>
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
+          <span><span className="muted">Số lần </span><b className="tabular">{ts.data ? fmt(ts.data.total) : "…"}</b></span>
+          <span><span className="muted">Users </span><b className="tabular">{ts.data ? fmt(ts.data.users) : "…"}</b></span>
+          <span><span className="muted">Lần / user </span><b className="tabular">{ts.data?.users ? (ts.data.total / ts.data.users).toFixed(1) : "—"}</b></span>
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-          {inline && (
-            <Link to={`/app/${appId}/events/${encodeURIComponent(name)}`} className="btn" title="Mở trang riêng">
-              <Icon name="arrowRight" size={14} className="muted" /> Trang riêng
-            </Link>
-          )}
-          <button className="btn" onClick={() => addFilter({ dim: "event", op: "eq", val: name })}>
-            <Icon name="filter" size={14} className="muted" /> Lọc theo event này
-          </button>
-        </div>
+        <button className="btn ml-auto" onClick={() => addFilter({ dim: "event", op: "eq", val: name })}>
+          <Icon name="filter" size={14} className="muted" /> Lọc theo event này
+        </button>
       </div>
 
-      <section>
-        <h3 className="mb-3 text-[13px] font-semibold">Theo ngày</h3>
-        <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={inline ? 200 : 240} />
-      </section>
-
+      {/* parameters first */}
       <section>
         <div className="flex flex-wrap items-end gap-3 border-b border-line">
           <h3 className="mb-2 mr-2 text-[13px] font-semibold">Parameter</h3>
@@ -223,7 +239,7 @@ function EventBody({ name, inline }: { name: string; inline?: boolean }) {
         )}
         {param && (
           <div className="mt-2">
-            <DataTable rows={rows.data} loading={rows.loading} maxHeight={inline ? 300 : undefined} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
+            <DataTable rows={rows.data} loading={rows.loading} maxHeight={inline ? 320 : undefined} onRow={(r) => addFilter({ dim: "p", key: param, op: "eq", val: r.value })} cols={[
               { key: "value", title: param },
               { key: "metric", title: metric === "users" ? "Users" : "Số lần", num: true, bar: true, render: (r) => fmt(r.metric) },
               metric === "users"
@@ -233,6 +249,12 @@ function EventBody({ name, inline }: { name: string; inline?: boolean }) {
             {rows.data && rows.data.length > 0 && <p className="mt-2 text-xs muted">{rows.data.length} giá trị · bấm 1 dòng để lọc dashboard theo giá trị đó</p>}
           </div>
         )}
+      </section>
+
+      {/* daily trend last */}
+      <section>
+        <h3 className="mb-3 text-[13px] font-semibold">Theo ngày</h3>
+        <TimeChart loading={ts.loading} labels={ts.data?.labels ?? []} series={ts.data?.series ?? []} height={inline ? 200 : 240} />
       </section>
     </div>
   );

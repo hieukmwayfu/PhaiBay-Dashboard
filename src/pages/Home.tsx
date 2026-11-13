@@ -96,7 +96,7 @@ export function Home() {
         {r.data && apps.length > 0 && <p className="mt-2 text-xs muted">{apps.length} app · {dates.from} → {dates.to}</p>}
       </div>
 
-      {creating && <CreateAppDialog onClose={() => setCreating(false)} onCreated={(id) => nav(`/app/${id}/setup`)} />}
+      {creating && <CreateAppDialog onClose={() => setCreating(false)} onCreated={(id) => nav(`/app/${id}`)} />}
     </Page>
   );
 }

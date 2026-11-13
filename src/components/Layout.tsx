@@ -10,9 +10,8 @@ export const APP_NAV: { to: string; label: string; icon: IconName; end?: boolean
   { to: "events", label: "Events", icon: "list" },
   { to: "explore", label: "Explore", icon: "compass" },
   { to: "funnel", label: "Funnel", icon: "funnel" },
-  { to: "debug", label: "DebugView", icon: "pulse" },
   { to: "ai", label: "AI phân tích", icon: "sparkles" },
-  { to: "setup", label: "Tích hợp SDK", icon: "code" },
+  { to: "debug", label: "DebugView", icon: "pulse" },
 ];
 
 /** Closes when clicking outside or pressing Escape. */

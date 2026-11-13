@@ -24,8 +24,12 @@ export const PAGE_SIZES = [10, 20, 50, 100];
  */
 export function PagedTable<T>({
   cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
-  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain, expanded, maxBodyHeight,
+  onSort, onPage, onPageSize, onRow, active, rowKey, compact, plain, expanded, maxBodyHeight, footer, onReachEnd,
 }: {
+  /** replaces the pagination footer (e.g. infinite scroll status); pass null to hide it */
+  footer?: ReactNode;
+  /** called when the scrollable body is scrolled near its end (infinite scroll) */
+  onReachEnd?: () => void;
   /** scroll the rows inside this height (header stays visible) */
   maxBodyHeight?: number;
   /** content shown in a full-width row right under a row (accordion); null = collapsed */
@@ -60,7 +64,8 @@ export function PagedTable<T>({
     <div className={plain ? "" : "overflow-hidden rounded-lg border border-line bg-surface"}>
       {toolbar && <div className={`flex flex-wrap items-center gap-2 ${plain ? "pb-3" : "border-b border-line p-3"}`}>{toolbar}</div>}
 
-      <div className={`relative overflow-x-auto ${maxBodyHeight ? "overflow-y-auto" : ""} ${plain ? "-mx-3" : ""}`} style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}>
+      <div className={`relative overflow-x-auto ${maxBodyHeight ? "overflow-y-auto" : ""} ${plain ? "-mx-3" : ""}`} style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+        onScroll={onReachEnd ? (e) => { const el = e.currentTarget; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) onReachEnd(); } : undefined}>
         {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-accent/50" />}
         <table className="w-full text-[13px]">
           <thead className="sticky top-0 z-10 bg-surface text-xs font-medium muted shadow-[inset_0_-1px_0_rgb(var(--line))]">
@@ -129,6 +134,7 @@ export function PagedTable<T>({
         {rows && rows.length === 0 && <Empty>{emptyText}</Empty>}
       </div>
 
+      {footer !== undefined ? footer : (
       <div className={`flex flex-wrap items-center justify-between gap-3 text-[13px] ${plain ? "border-t border-line pt-3" : "border-t border-line px-4 py-3"}`}>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 muted">
@@ -147,6 +153,7 @@ export function PagedTable<T>({
           <PageBtn icon="chevronsLeft" flip title="Trang cuối" disabled={page >= pages} onClick={() => onPage(pages)} />
         </div>
       </div>
+      )}
     </div>
   );
 }

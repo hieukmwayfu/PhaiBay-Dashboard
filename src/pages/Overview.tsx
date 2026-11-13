@@ -1,10 +1,8 @@
-import { useNavigate } from "react-router-dom";
 import { api, type BreakdownRow, type Overview as OV } from "../lib/api";
 import { fmt, useChartTheme } from "../lib/format";
 import { useDash, useLoad, type Dim } from "../lib/state";
 import { TimeChart } from "../components/Charts";
-import { Icon } from "../components/Icon";
-import { Card, DataTable, delta, ErrorBox, Kpi } from "../components/ui";
+import { Card, CopyButton, DataTable, delta, ErrorBox, Kpi } from "../components/ui";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -18,8 +16,8 @@ function prevRange(from: string, to: string) {
 }
 
 export function Overview() {
-  const { q, addFilter, dates, appId } = useDash();
-  const nav = useNavigate();
+  const { q, addFilter, dates, appId, apps } = useDash();
+  const app = apps.find((a) => a.id === appId);
   const { palette } = useChartTheme();
   const ov = useLoad(() => api<OV>("/api/overview", q()), [q]);
   const prev = useLoad(() => api<OV>("/api/overview", { ...q(), ...prevRange(dates.from, dates.to) }), [q]);
@@ -38,10 +36,16 @@ export function Overview() {
       {ov.data && t && t.events === 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-raised/60 px-4 py-3">
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Chưa có event trong khoảng này</div>
-            <div className="text-xs muted">Gắn SDK vào game rồi xem event realtime ở DebugView.</div>
+            <div className="text-[13px] font-semibold">Chưa có event trong khoảng này</div>
+            <div className="text-xs muted">Điền App Key + Server URL vào PhaiBay › Settings trong Unity, rồi xem event realtime ở DebugView.</div>
           </div>
-          <button className="btn" onClick={() => nav(`/app/${appId}/setup`)}>Hướng dẫn tích hợp <Icon name="arrowRight" size={14} /></button>
+          {app && (
+            <div className="flex items-center gap-1 rounded-md border border-line bg-surface py-0.5 pl-2.5 pr-0.5">
+              <span className="text-xs muted">App key</span>
+              <code className="font-mono text-xs">{app.app_key}</code>
+              <CopyButton text={app.app_key} />
+            </div>
+          )}
         </div>
       )}
 
