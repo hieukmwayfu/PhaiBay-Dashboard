@@ -2,8 +2,9 @@ import { useState } from "react";
 import { api, storage, type EventRow, type FunnelStep } from "../lib/api";
 import { fmt, pct } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
-import { HBarChart } from "../components/Charts";
-import { Card, DataTable, ErrorBox } from "../components/ui";
+import { FunnelBars } from "../components/Charts";
+import { Icon } from "../components/Icon";
+import { Card, DataTable, Empty, ErrorBox, Loading } from "../components/ui";
 
 export function Funnel() {
   const { q } = useDash();
@@ -22,32 +23,40 @@ export function Funnel() {
   const set = (i: number, v: string) => setSteps(steps.map((s, j) => (j === i ? v : s)));
 
   return (
-    <Card>
-      <p className="mb-3 text-sm muted">Funnel đóng, có thứ tự: user phải làm bước N sau bước N-1 (trong khoảng ngày + filter đang chọn).</p>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+    <Card title="Các bước" subtitle="Funnel đóng, có thứ tự: user phải làm bước N sau bước N-1.">
+      <div className="space-y-2">
         {steps.map((s, i) => (
-          <span key={i} className="inline-flex items-center gap-1">
-            <span className="text-xs muted">{i + 1}.</span>
-            <select className="input" value={s} onChange={(e) => set(i, e.target.value)}>
+          <div key={i} className="flex items-center gap-2">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent/10 text-xs font-bold text-accent">{i + 1}</span>
+            <select className="input min-w-0 flex-1" value={s} onChange={(e) => set(i, e.target.value)}>
               <option value="">(chọn event)</option>
               {!events.data?.some((e) => e.name === s) && s && <option>{s}</option>}
               {(events.data ?? []).map((e) => <option key={e.name}>{e.name}</option>)}
             </select>
-            {steps.length > 2 && <button className="px-1 muted hover:text-red-500" onClick={() => setSteps(steps.filter((_, j) => j !== i))}>✕</button>}
-            {i < steps.length - 1 && <span className="muted">→</span>}
-          </span>
+            <button className={`btn-ghost !px-2 ${steps.length > 2 ? "" : "invisible"}`} onClick={() => setSteps(steps.filter((_, j) => j !== i))} aria-label="Xóa bước">
+              <Icon name="x" size={15} />
+            </button>
+          </div>
         ))}
-        {steps.length < 10 && <button className="btn" onClick={() => setSteps([...steps, ""])}>+ Bước</button>}
+        {steps.length < 10 && <button className="btn w-full border-dashed" onClick={() => setSteps([...steps, ""])}><Icon name="plus" size={15} /> Thêm bước</button>}
       </div>
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        Trong vòng <input type="number" min={0} className="input w-24" value={windowH} onChange={(e) => setWindowH(Number(e.target.value))} /> giờ (0 = không giới hạn)
-        <button className="btn-primary" onClick={() => setRun(run + 1)}>Chạy</button>
+      <div className="mt-5 border-t border-line pt-4">
+        <span className="label">Khoảng thời gian tối đa từ bước 1</span>
+        <div className="flex items-center gap-2 text-sm">
+          <input type="number" min={0} className="input w-24" value={windowH} onChange={(e) => setWindowH(Number(e.target.value))} /> giờ
+          <span className="text-xs muted">(0 = không giới hạn)</span>
+        </div>
       </div>
+      <button className="btn-primary mt-5 w-full" onClick={() => setRun(run + 1)}><Icon name="funnel" size={16} /> Chạy funnel</button>
+    </Card>
+    <Card title="Kết quả" right={<Loading on={res.loading} />}>
       <ErrorBox error={res.error} />
+      {!res.data && !res.loading && <Empty icon="funnel">Chọn ít nhất 2 bước rồi bấm Chạy</Empty>}
       {res.data && (
         <>
-          <HBarChart rows={res.data.map((r, i) => ({ label: `${i + 1}. ${r.name}`, value: r.users }))} height={Math.max(200, res.data.length * 56)} />
-          <div className="mt-3">
+          <FunnelBars steps={res.data} />
+          <div className="mt-6 border-t border-line pt-4">
             <DataTable rows={res.data} cols={[
               { key: "name", title: "Bước" },
               { key: "users", title: "Users", num: true, bar: true, render: (r) => fmt(r.users) },
@@ -58,5 +67,6 @@ export function Funnel() {
         </>
       )}
     </Card>
+    </div>
   );
 }

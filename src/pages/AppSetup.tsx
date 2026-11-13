@@ -1,27 +1,29 @@
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { getServerUrl } from "../lib/api";
 import { useDash } from "../lib/state";
-import { Card } from "../components/ui";
+import { Icon } from "../components/Icon";
+import { Card, CopyButton } from "../components/ui";
 
 const SDK_GIT = "https://github.com/hieukmwayfu/PhaiBay-UnitySDK.git?path=/Assets/PhaiBaySDK";
-
-function Copy({ text }: { text: string }) {
-  const [ok, setOk] = useState(false);
-  return (
-    <button className="text-xs muted hover:text-brand" onClick={() => { navigator.clipboard?.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); }}>
-      {ok ? "đã copy" : "copy"}
-    </button>
-  );
-}
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="mb-1 text-xs muted">{label}</div>
-      <div className="flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
-        <code className="min-w-0 flex-1 truncate text-sm">{value}</code>
-        <Copy text={value} />
+      <div className="label">{label}</div>
+      <div className="code flex items-center gap-2 py-1 pl-3 pr-1">
+        <code className="min-w-0 flex-1 truncate py-1">{value}</code>
+        <CopyButton text={value} />
       </div>
+    </div>
+  );
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <div className="relative pl-11">
+      <span className="absolute left-0 top-0 grid h-7 w-7 place-items-center rounded-lg bg-accent text-xs font-bold text-accent-fg shadow-glow">{n}</span>
+      <h3 className="mb-2 pt-0.5 text-sm font-semibold">{title}</h3>
+      {children}
     </div>
   );
 }
@@ -31,7 +33,9 @@ export function AppSetup() {
   const app = apps.find((a) => a.id === appId);
   if (!app) return null;
   const server = getServerUrl();
-  const code = `// Cách 1: menu PhaiBay > Settings trong Unity, điền App Key + Server URL (tự khởi tạo)
+  const code = `// Cách 1 (khuyên dùng): menu PhaiBay › Settings trong Unity,
+// điền App Key + Server URL, SDK tự khởi tạo khi chạy game.
+
 // Cách 2: bằng code
 PhaiBay.Initialize("${app.app_key}", "${server}");
 
@@ -42,25 +46,47 @@ PhaiBay.LogEvent("level_end",
 PhaiBay.SetUserProperty("vip", "gold");`;
 
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      <Card title="Thông tin app">
-        <div className="space-y-3">
-          <Field label="App key (không đổi được)" value={app.app_key} />
-          <Field label="Server URL" value={server} />
-          <div className="text-xs muted">Tạo lúc {new Date(app.created_at * 1000).toLocaleString()}</div>
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <Card title="Tích hợp Unity SDK" subtitle="3 bước để bắt đầu nhận event">
+        <div className="space-y-7">
+          <Step n={1} title="Cài package">
+            <p className="mb-2 text-sm muted">Window › Package Manager › <b className="text-fg">+</b> › Add package from git URL…</p>
+            <Field label="Git URL" value={SDK_GIT} />
+          </Step>
+          <Step n={2} title="Cấu hình & bắn event">
+            <div className="code relative overflow-hidden">
+              <div className="absolute right-1.5 top-1.5"><CopyButton text={code} label="Copy" /></div>
+              <pre className="overflow-x-auto p-4 pr-20 leading-relaxed">{code}</pre>
+            </div>
+          </Step>
+          <Step n={3} title="Kiểm tra">
+            <p className="text-sm muted">Mở tab <b className="text-fg">DebugView</b> để xem event realtime (chỉ bản build Android ghi dữ liệu thật).</p>
+          </Step>
         </div>
       </Card>
-      <Card title="1. Cài Unity SDK">
-        <p className="mb-2 text-sm">Window › Package Manager › + › <b>Add package from git URL…</b></p>
-        <Field label="Git URL" value={SDK_GIT} />
-      </Card>
-      <Card title="2. Khởi tạo & bắn event" className="lg:col-span-2">
-        <div className="relative">
-          <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-3 text-xs dark:bg-zinc-800">{code}</pre>
-          <div className="absolute right-2 top-2"><Copy text={code} /></div>
-        </div>
-        <p className="mt-2 text-xs muted">Sau khi bắn event, xem realtime ở tab <b>DebugView</b>.</p>
-      </Card>
+
+      <div className="space-y-4">
+        <Card title="Thông tin app">
+          <div className="space-y-3">
+            <Field label="App key (không đổi được)" value={app.app_key} />
+            <Field label="Server URL" value={server} />
+            <div className="flex items-center gap-2 pt-1 text-xs muted">
+              <Icon name="calendar" size={14} /> Tạo lúc {new Date(app.created_at * 1000).toLocaleString()}
+            </div>
+          </div>
+        </Card>
+        <Card title="Chế độ test">
+          <div className="space-y-2 text-sm">
+            <p className="muted">Khi chạy trong <b className="text-fg">Unity Editor</b> hoặc bản build <b className="text-fg">Windows / Mac / Linux</b>, SDK gửi event ở chế độ <b className="text-fg">dry-run</b>:</p>
+            <ul className="space-y-1.5">
+              {["Server kiểm tra App Key, kết nối và định dạng event", "Không ghi vào database, dashboard không bị lẫn data test", "Kết quả hiện ở PhaiBay.LastUploadStatus / console"].map((t) => (
+                <li key={t} className="flex gap-2"><Icon name="check" size={16} className="mt-0.5 text-good" strokeWidth={2.2} /><span>{t}</span></li>
+              ))}
+            </ul>
+            <p className="pt-1 text-xs muted">Chỉ bản build <b className="text-fg">Android</b> mới ghi dữ liệu thật.</p>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

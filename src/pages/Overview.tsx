@@ -1,41 +1,73 @@
+import { useNavigate } from "react-router-dom";
 import { api, type BreakdownRow, type Overview as OV } from "../lib/api";
-import { fmt } from "../lib/format";
+import { fmt, useChartTheme } from "../lib/format";
 import { useDash, useLoad, type Dim } from "../lib/state";
 import { TimeChart } from "../components/Charts";
-import { Card, DataTable, ErrorBox, Kpi } from "../components/ui";
+import { Icon } from "../components/Icon";
+import { Card, DataTable, delta, ErrorBox, Kpi } from "../components/ui";
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Same-length window right before [from, to]. */
+function prevRange(from: string, to: string) {
+  const f = new Date(from + "T00:00:00Z"), t = new Date(to + "T00:00:00Z");
+  const days = Math.round((t.getTime() - f.getTime()) / 864e5) + 1;
+  const pt = new Date(f.getTime() - 864e5);
+  const pf = new Date(pt.getTime() - (days - 1) * 864e5);
+  return { from: iso(pf), to: iso(pt) };
+}
 
 export function Overview() {
-  const { q, addFilter } = useDash();
+  const { q, addFilter, dates, appId } = useDash();
+  const nav = useNavigate();
+  const { palette } = useChartTheme();
   const ov = useLoad(() => api<OV>("/api/overview", q()), [q]);
+  const prev = useLoad(() => api<OV>("/api/overview", { ...q(), ...prevRange(dates.from, dates.to) }), [q]);
   const t = ov.data?.totals;
-  const labels = ov.data?.series.map((p) => p.day) ?? [];
+  const p = prev.data?.totals;
+  const s = ov.data?.series ?? [];
+  const labels = s.map((x) => x.day);
+  const loading = ov.loading && !ov.data;
+  const epu = t?.users ? t.events / t.users : undefined;
+  const epuPrev = p?.users ? p.events / p.users : undefined;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <ErrorBox error={ov.error} />
+
+      {ov.data && t && t.events === 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Icon name="terminal" size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Chưa có event trong khoảng này</div>
+            <div className="text-xs muted">Gắn SDK vào game rồi xem event realtime ở DebugView.</div>
+          </div>
+          <button className="btn" onClick={() => nav(`/app/${appId}/setup`)}>Hướng dẫn tích hợp <Icon name="arrowRight" size={15} /></button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <Kpi label="Người dùng" value={fmt(t?.users)} />
-        <Kpi label="User mới" value={fmt(t?.new_users)} />
-        <Kpi label="Sessions" value={fmt(t?.sessions)} />
-        <Kpi label="Events" value={fmt(t?.events)} />
-        <Kpi label="Events / user" value={t?.users ? (t.events / t.users).toFixed(1) : "–"} />
+        <Kpi label="Người dùng" icon="users" value={fmt(t?.users)} change={delta(t?.users, p?.users)} spark={s.map((x) => x.users)} color={palette[0]} loading={loading} />
+        <Kpi label="User mới" icon="userPlus" value={fmt(t?.new_users)} change={delta(t?.new_users, p?.new_users)} spark={s.map((x) => x.new_users)} color={palette[0]} loading={loading} />
+        <Kpi label="Sessions" icon="layers" value={fmt(t?.sessions)} change={delta(t?.sessions, p?.sessions)} spark={s.map((x) => x.sessions)} color={palette[0]} loading={loading} />
+        <Kpi label="Events" icon="bolt" value={fmt(t?.events)} change={delta(t?.events, p?.events)} spark={s.map((x) => x.events)} color={palette[0]} loading={loading} />
+        <Kpi label="Events / user" icon="ratio" value={epu != null ? epu.toFixed(1) : "–"} change={delta(epu, epuPrev)} color={palette[0]} loading={loading} />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Người dùng theo ngày">
-          <TimeChart labels={labels} series={[
-            { name: "Active users", values: ov.data?.series.map((p) => p.users) ?? [] },
-            { name: "New users", values: ov.data?.series.map((p) => p.new_users) ?? [] },
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Người dùng theo ngày" subtitle="Active users và user mới">
+          <TimeChart loading={ov.loading} labels={labels} series={[
+            { name: "Active users", values: s.map((x) => x.users) },
+            { name: "User mới", values: s.map((x) => x.new_users) },
           ]} />
         </Card>
-        <Card title="Events & Sessions">
-          <TimeChart bars labels={labels} series={[
-            { name: "Events", values: ov.data?.series.map((p) => p.events) ?? [] },
-            { name: "Sessions", values: ov.data?.series.map((p) => p.sessions) ?? [] },
-          ]} />
+        <Card title="Events theo ngày" subtitle="Tổng số event được ghi nhận">
+          <TimeChart bars loading={ov.loading} labels={labels} series={[{ name: "Events", values: s.map((x) => x.events) }]} />
         </Card>
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {(["country", "version", "platform", "event"] as Dim[]).map((dim) => (
+
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        {(["event", "country", "version", "platform"] as Dim[]).map((dim) => (
           <TopCard key={dim} dim={dim} onPick={(v) => addFilter({ dim, op: "eq", val: v })} />
         ))}
       </div>
@@ -43,22 +75,22 @@ export function Overview() {
   );
 }
 
-const TITLES: Record<string, string> = { country: "Quốc gia", version: "Version", platform: "Platform", event: "Top events" };
+const TITLES: Record<string, { t: string; icon: "bolt" | "globe" | "box" | "server" }> = {
+  event: { t: "Top events", icon: "bolt" }, country: { t: "Quốc gia", icon: "globe" }, version: { t: "Version", icon: "box" }, platform: { t: "Platform", icon: "server" },
+};
 
 function TopCard({ dim, onPick }: { dim: Dim; onPick: (v: string) => void }) {
   const { q } = useDash();
-  const r = useLoad(() => api<BreakdownRow[]>("/api/breakdown", q({ dim, metric: dim === "event" ? "count" : "users", limit: 10 })), [q, dim]);
+  const r = useLoad(() => api<BreakdownRow[]>("/api/breakdown", q({ dim, metric: dim === "event" ? "count" : "users", limit: 8 })), [q, dim]);
+  const meta = TITLES[dim];
   return (
-    <Card title={TITLES[dim]}>
+    <Card title={<span className="inline-flex items-center gap-2"><Icon name={meta.icon} size={15} className="muted" />{meta.t}</span>} subtitle="Bấm 1 dòng để lọc">
       <ErrorBox error={r.error} />
-      <DataTable rows={r.data} onRow={(x) => onPick(x.value)} cols={[
-        { key: "value", title: "Giá trị" },
+      <DataTable rows={r.data} loading={r.loading} onRow={(x) => onPick(x.value)} cols={[
+        { key: "value", title: dim === "event" ? "Event" : "Giá trị", render: (x) => <span className="block max-w-[12rem] truncate" title={x.value}>{x.value}</span> },
         dim === "event"
           ? { key: "count", title: "Số lần", num: true, bar: true, render: (x) => fmt(x.count) }
           : { key: "users", title: "Users", num: true, bar: true, render: (x) => fmt(x.users) },
-        dim === "event"
-          ? { key: "users", title: "Users", num: true, render: (x) => fmt(x.users) }
-          : { key: "count", title: "Events", num: true, render: (x) => fmt(x.count) },
       ]} />
     </Card>
   );
