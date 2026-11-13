@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getServerUrl, login, setServerUrl } from "../lib/api";
+import { getServerUrl, login, normalizeServerUrl, serverUrlProblem, setServerUrl } from "../lib/api";
 
 export function Login({ onDone }: { onDone: () => void }) {
   const [server, setServer] = useState(getServerUrl());
@@ -7,12 +7,16 @@ export function Login({ onDone }: { onDone: () => void }) {
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const warn = server.trim() ? serverUrlProblem(normalizeServerUrl(server)) : "";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const s = normalizeServerUrl(server);
+    if (!s) return setErr("Nhập địa chỉ server.");
+    setServer(s);
     setBusy(true);
     setErr("");
-    setServerUrl(server);
+    setServerUrl(s);
     try {
       await login(user.trim(), pass);
       onDone();
@@ -31,8 +35,9 @@ export function Login({ onDone }: { onDone: () => void }) {
         </div>
         <p className="text-sm muted">Đăng nhập dashboard</p>
         <label className="block text-xs muted">Server
-          <input className="input mt-1 w-full" value={server} onChange={(e) => setServer(e.target.value)} placeholder="https://analytics.example.com" />
+          <input className="input mt-1 w-full" value={server} onChange={(e) => setServer(e.target.value)} placeholder="https://xxxx.trycloudflare.com" required />
         </label>
+        {warn && <div className="text-xs text-amber-600 dark:text-amber-400">{warn}</div>}
         <label className="block text-xs muted">Username
           <input className="input mt-1 w-full" value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus />
         </label>

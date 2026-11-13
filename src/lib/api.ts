@@ -19,13 +19,70 @@ const LS = {
 };
 export const storage = LS;
 
-const ENV_URL = (import.meta.env.VITE_API_URL as string | undefined) || "http://localhost:8080";
+const IS_LOCAL_PAGE = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+// Build-time default. On a deployed dashboard without VITE_API_URL there is no sensible default:
+// "localhost" would point at the viewer's own machine.
+const ENV_URL = (import.meta.env.VITE_API_URL as string | undefined) || (IS_LOCAL_PAGE ? "http://localhost:8080" : "");
+
+/** "abc.trycloudflare.com/" -> "https://abc.trycloudflare.com" */
+export function normalizeServerUrl(u: string): string {
+  let s = u.trim().replace(/\/+$/, "");
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = (/^(localhost|127\.|192\.168\.|10\.)/.test(s) ? "http://" : "https://") + s;
+  return s;
+}
+
+// ?server=https://xyz lets you share a link that is preconfigured for a server.
+(() => {
+  try {
+    const p = new URLSearchParams(location.search);
+    const s = p.get("server");
+    if (s) {
+      LS.set("server", normalizeServerUrl(s));
+      p.delete("server");
+      const qs = p.toString();
+      history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+    }
+  } catch {
+    /* ignore */
+  }
+})();
 
 export function getServerUrl(): string {
-  return LS.get("server", ENV_URL);
+  return LS.get("server", ENV_URL) || ENV_URL;
 }
 export function setServerUrl(u: string) {
-  LS.set("server", u.trim().replace(/\/+$/, "") || ENV_URL);
+  LS.set("server", normalizeServerUrl(u) || ENV_URL);
+}
+
+/** Explains why the browser cannot reach the server (returns "" when the URL looks fine). */
+export function serverUrlProblem(u: string): string {
+  if (!u) return "Chưa nhập địa chỉ server.";
+  let url: URL;
+  try {
+    url = new URL(u);
+  } catch {
+    return `Địa chỉ server không hợp lệ: ${u}`;
+  }
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (location.protocol === "https:" && url.protocol === "http:" && !local)
+    return "Dashboard chạy HTTPS nên trình duyệt chặn server HTTP. Hãy dùng địa chỉ HTTPS (vd: link Cloudflare tunnel).";
+  return "";
+}
+
+function networkErrorMessage(u: string): string {
+  const p = serverUrlProblem(u);
+  if (p) return p;
+  let host = "";
+  try {
+    host = new URL(u).hostname;
+  } catch {
+    /* ignore */
+  }
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(host);
+  return local && !IS_LOCAL_PAGE
+    ? `Không kết nối được ${u}. "localhost" là máy đang mở trình duyệt — nếu server ở máy khác hãy dùng link HTTPS của server (vd: Cloudflare tunnel). Nếu trình duyệt hỏi quyền truy cập mạng cục bộ, hãy cho phép.`
+    : `Không kết nối được server ${u} (server tắt, sai địa chỉ, hoặc link tunnel đã đổi).`;
 }
 export function getToken(): string {
   return LS.get("token", "");
@@ -48,7 +105,10 @@ export function setUnauthorizedHandler(fn: () => void) {
 export type Query = Record<string, string | number | undefined | null | (string | number)[]>;
 
 export async function api<T>(path: string, query: Query = {}, init: RequestInit = {}): Promise<T> {
-  const u = new URL(path, getServerUrl());
+  const base = getServerUrl();
+  const problem = serverUrlProblem(base);
+  if (problem) throw new ApiError(0, problem);
+  const u = new URL(path, base);
   for (const [k, v] of Object.entries(query)) {
     if (v === undefined || v === null || v === "") continue;
     for (const x of Array.isArray(v) ? v : [v]) u.searchParams.append(k, String(x));
@@ -60,7 +120,7 @@ export async function api<T>(path: string, query: Query = {}, init: RequestInit 
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken(), ...(init.headers || {}) },
     });
   } catch {
-    throw new ApiError(0, `Không kết nối được server ${getServerUrl()}`);
+    throw new ApiError(0, networkErrorMessage(base));
   }
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && !path.startsWith("/api/auth/login")) {
