@@ -24,7 +24,7 @@ const shortDay = (s: string) => {
 function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="min-w-[160px] rounded-xl border border-line bg-surface/95 px-3 py-2.5 text-xs shadow-pop backdrop-blur">
+    <div className="min-w-[150px] rounded-md border border-line bg-surface px-3 py-2 text-xs shadow-pop">
       <div className="mb-1.5 font-semibold text-fg">{label}</div>
       <div className="space-y-1">
         {payload.map((p) => (

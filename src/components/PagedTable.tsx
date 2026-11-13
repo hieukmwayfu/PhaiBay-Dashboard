@@ -51,13 +51,13 @@ export function PagedTable<T>({
   for (const c of cols) if (c.bar) max[c.key] = Math.max(1, ...(rows ?? []).map((r) => Number((r as Record<string, unknown>)[c.key]) || 0));
 
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-line bg-surface">
       {toolbar && <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">{toolbar}</div>}
 
       <div className="relative overflow-x-auto">
-        {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-accent/20"><div className="h-full w-1/3 animate-shimmer bg-accent" /></div>}
+        {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-accent/50" />}
         <table className="w-full text-sm">
-          <thead className="border-b border-line bg-raised/60 text-xs font-semibold muted">
+          <thead className="border-b border-line text-xs font-medium muted">
             <tr>
               {cols.map((c) => {
                 const on = sort === c.key;
@@ -86,7 +86,7 @@ export function PagedTable<T>({
               const on = active?.(r);
               return (
                 <tr key={rowKey(r)} onClick={onRow ? () => onRow(r) : undefined}
-                  className={`${onRow ? "cursor-pointer" : ""} ${on ? "bg-accent/10" : "hover:bg-raised/60"} transition-colors`}>
+                  className={`${onRow ? "cursor-pointer" : ""} ${on ? "bg-raised" : "hover:bg-raised/70"} transition-colors`}>
                   {cols.map((c, ci) => {
                     const raw = (r as Record<string, unknown>)[c.key];
                     const content = c.render ? c.render(r) : String(raw ?? "");
@@ -94,8 +94,10 @@ export function PagedTable<T>({
                       const w = (100 * (Number(raw) || 0)) / max[c.key];
                       return (
                         <td key={c.key} className={`relative whitespace-nowrap text-right tabular ${compact ? "px-3 py-2" : "px-4 py-2.5"} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`} style={{ width: c.width }}>
-                          <span className="absolute inset-y-1.5 right-1.5 rounded-md bg-accent/15" style={{ width: `calc(${w}% - 12px)` }} />
-                          <span className="relative font-medium">{content}</span>
+                          <span className="inline-flex items-center justify-end gap-2">
+                            <span className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-raised sm:block"><span className="block h-full rounded-full bg-accent/60" style={{ width: `${w}%` }} /></span>
+                            <span className="min-w-[3rem]">{content}</span>
+                          </span>
                         </td>
                       );
                     }

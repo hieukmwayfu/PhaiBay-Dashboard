@@ -151,16 +151,16 @@ export function Ai() {
         <ErrorBox error={err} />
         <Card>
           <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg">
-              <Icon name="sparkles" size={30} />
+            <span className="grid h-11 w-11 place-items-center rounded-lg border border-line text-dim">
+              <Icon name="sparkles" size={20} />
             </span>
             <div>
-              <h2 className="text-xl font-bold">AI phân tích dữ liệu</h2>
+              <h2 className="text-[17px] font-semibold">AI phân tích dữ liệu</h2>
               <p className="mx-auto mt-2 max-w-md text-sm muted">
                 Hỏi bằng tiếng Việt, AI tự lấy số liệu của <b className="text-fg">{app.name}</b> (overview, events, funnel, quốc gia, version…) rồi phân tích và đề xuất.
               </p>
             </div>
-            <button className="btn-primary h-11 px-5 text-[15px]" onClick={login}>
+            <button className="btn-primary h-9 px-4" onClick={login}>
               <Icon name="key" size={18} /> Đăng nhập OpenRouter
             </button>
             <ul className="mt-2 space-y-1.5 text-left text-xs muted">
@@ -177,9 +177,9 @@ export function Ai() {
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
       {/* chat */}
-      <Card pad={false} className="flex min-h-[calc(100vh-150px)] flex-col">
+      <Card pad={false} className="flex min-h-[calc(100vh-190px)] flex-col">
         <div className="flex items-center gap-2 border-b border-line px-5 py-3">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"><Icon name="sparkles" size={16} /></span>
+          <span className="grid h-8 w-8 place-items-center rounded-md border border-line text-dim"><Icon name="sparkles" size={16} /></span>
           <div className="min-w-0">
             <div className="text-sm font-semibold">AI phân tích · {app.name}</div>
             <div className="truncate text-xs muted">{dates.from} → {dates.to}{Object.keys(ctx.filters).length ? ` · ${Object.keys(ctx.filters).length} bộ lọc` : ""}</div>
@@ -193,17 +193,17 @@ export function Ai() {
           {msgs.length === 0 && (
             <div className="flex flex-col items-center gap-5 py-6 text-center">
               <div>
-                <div className="text-lg font-semibold">Hỏi gì về dữ liệu game?</div>
+                <div className="text-[15px] font-semibold">Hỏi gì về dữ liệu game?</div>
                 <p className="mt-1 text-sm muted">Hoặc bấm <b className="text-fg">Phân tích</b> để AI tự soi toàn bộ app.</p>
               </div>
-              <button className="btn-primary h-11 px-6" onClick={() => send(ANALYZE)} disabled={!model}>
+              <button className="btn-primary h-9 px-4" onClick={() => send(ANALYZE)} disabled={!model}>
                 <Icon name="sparkles" size={17} /> Phân tích ngay
               </button>
               <div className="grid w-full max-w-2xl gap-2 sm:grid-cols-2">
                 {QUICK.map((s) => (
                   <button key={s.label} onClick={() => send(s.text)} disabled={!model}
-                    className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent"><Icon name={s.icon} size={16} /></span>
+                    className="flex items-center gap-3 rounded-md border border-line bg-surface px-3 py-2 text-left text-[13px] transition-colors hover:bg-raised">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-line text-dim"><Icon name={s.icon} size={16} /></span>
                     {s.label}
                   </button>
                 ))}
@@ -213,11 +213,11 @@ export function Ai() {
 
           {msgs.map((m, i) => m.role === "user" ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm text-accent-fg shadow-sm">{m.content}</div>
+              <div className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-raised px-3.5 py-2 text-[13px] text-fg">{m.content}</div>
             </div>
           ) : (
             <div key={i} className="flex gap-3">
-              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white"><Icon name="sparkles" size={14} /></span>
+              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md border border-line text-dim"><Icon name="sparkles" size={14} /></span>
               <div className="min-w-0 flex-1">
                 {m.tools && m.tools.length > 0 && (
                   <div className="mb-2 flex flex-wrap gap-1.5">
@@ -250,12 +250,12 @@ export function Ai() {
             </div>
           )}
           <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-            <textarea className="input min-h-[44px] flex-1 resize-none py-2.5 leading-snug" rows={1} value={input} placeholder="Hỏi về dữ liệu… (Enter để gửi, Shift+Enter xuống dòng)"
+            <textarea className="input min-h-[36px] flex-1 resize-none py-2 leading-snug" rows={1} value={input} placeholder="Hỏi về dữ liệu… (Enter để gửi, Shift+Enter xuống dòng)"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }} />
             {busy
-              ? <button type="button" className="btn h-11" onClick={() => abort.current?.abort()}><Icon name="x" size={16} /> Dừng</button>
-              : <button className="btn-primary h-11 px-4" disabled={!input.trim() || !model}><Icon name="arrowUp" size={18} strokeWidth={2.2} /></button>}
+              ? <button type="button" className="btn h-9" onClick={() => abort.current?.abort()}><Icon name="x" size={16} /> Dừng</button>
+              : <button className="btn-primary h-9 px-3" disabled={!input.trim() || !model}><Icon name="arrowUp" size={18} strokeWidth={2.2} /></button>}
           </form>
           <ErrorBox error={err} />
         </div>
@@ -274,11 +274,11 @@ export function Ai() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-raised/70 p-3">
+                <div className="rounded-md border border-line p-2.5">
                   <div className="text-[11px] muted">Còn lại</div>
                   <div className="text-base font-semibold">{info.limit_remaining == null ? "Không giới hạn" : usd(info.limit_remaining)}</div>
                 </div>
-                <div className="rounded-xl bg-raised/70 p-3">
+                <div className="rounded-md border border-line p-2.5">
                   <div className="text-[11px] muted">Đã dùng tháng này</div>
                   <div className="text-base font-semibold">{usd(info.usage_monthly)}</div>
                 </div>
@@ -302,8 +302,8 @@ export function Ai() {
           <ModelPicker models={models} value={model} onChange={setModel} />
           {cur && (
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg bg-raised/70 p-2"><div className="muted">Input / 1M token</div><b>${perMillion(cur.pricing.prompt).toFixed(2)}</b></div>
-              <div className="rounded-lg bg-raised/70 p-2"><div className="muted">Output / 1M token</div><b>${perMillion(cur.pricing.completion).toFixed(2)}</b></div>
+              <div className="rounded-md border border-line p-2"><div className="muted">Input / 1M token</div><b>${perMillion(cur.pricing.prompt).toFixed(2)}</b></div>
+              <div className="rounded-md border border-line p-2"><div className="muted">Output / 1M token</div><b>${perMillion(cur.pricing.completion).toFixed(2)}</b></div>
             </div>
           )}
         </Card>
@@ -336,7 +336,7 @@ function ModelPicker({ models, value, onChange }: { models: OrModel[]; value: st
         <Icon name="chevron" size={14} className="rotate-90 muted" />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-line bg-surface p-1 shadow-pop">
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-md border border-line bg-surface p-1 shadow-pop">
           <input className="input mb-1 w-full" autoFocus placeholder="Tìm model (gpt, claude, gemini…)" value={qText} onChange={(e) => setQ(e.target.value)} />
           <div className="max-h-72 overflow-auto">
             {list.map((m) => (

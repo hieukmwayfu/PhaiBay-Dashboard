@@ -59,7 +59,7 @@ export function Markdown({ text }: { text: string }) {
       while (i < lines.length && isTableRow(lines[i])) rows.push(cells(lines[i++]));
       const num = head.map((_, c) => rows.length > 0 && rows.every((r) => !r[c] || numeric(r[c])));
       blocks.push(
-        <div key={k++} className="my-2 overflow-x-auto rounded-xl border border-line">
+        <div key={k++} className="my-2 overflow-x-auto rounded-md border border-line">
           <table className="w-full text-[13px]">
             <thead className="bg-raised/60">
               <tr>{head.map((c, j) => <th key={j} className={`whitespace-nowrap px-3 py-2 font-semibold ${num[j] ? "text-right" : "text-left"}`}>{inline(c, j)}</th>)}</tr>

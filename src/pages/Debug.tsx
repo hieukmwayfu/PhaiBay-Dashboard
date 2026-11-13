@@ -45,7 +45,7 @@ export function Debug() {
         {applied && <button className="chip hover:border-bad/40" onClick={() => pick("")}>user: <b className="font-mono">{applied.slice(0, 12)}</b> <Icon name="x" size={11} /></button>}
         <div className="ml-auto flex items-center gap-3">
           <button onClick={() => setAuto(!auto)}
-            className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-sm font-medium transition ${auto ? "border-good/40 bg-good/10 text-good" : "border-line muted hover:bg-raised"}`}>
+            className={`inline-flex h-8 items-center gap-2 rounded-md border px-2.5 text-[13px] transition-colors ${auto ? "border-line text-fg" : "border-line muted hover:bg-raised"}`}>
             <span className={`h-2 w-2 rounded-full ${auto ? "bg-good animate-pulse2" : "bg-dim/50"}`} />
             {auto ? "Live · 5s" : "Tạm dừng"}
           </button>
@@ -75,7 +75,7 @@ export function Debug() {
                   <Icon name="chevron" size={14} className={`shrink-0 muted transition ${isOpen ? "rotate-90" : ""}`} />
                 </button>
                 {isOpen && (
-                  <div className="mb-3 ml-2 grid gap-3 rounded-xl border border-line bg-raised/40 p-3 text-xs animate-fade-in sm:grid-cols-2">
+                  <div className="mb-3 ml-2 grid gap-3 rounded-md border border-line bg-raised/40 p-3 text-xs sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <div className="font-semibold">Params</div>
                       {e.params ? <KV obj={e.params} /> : <span className="muted">—</span>}

@@ -28,7 +28,7 @@ export function Funnel() {
       <div className="space-y-2">
         {steps.map((s, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent/10 text-xs font-bold text-accent">{i + 1}</span>
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line text-xs font-medium muted">{i + 1}</span>
             <select className="input min-w-0 flex-1" value={s} onChange={(e) => set(i, e.target.value)}>
               <option value="">(chọn event)</option>
               {!events.data?.some((e) => e.name === s) && s && <option>{s}</option>}

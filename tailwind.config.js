@@ -29,7 +29,7 @@ export default {
       },
       boxShadow: {
         card: "0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.02)",
-        pop: "0 20px 40px -12px rgb(0 0 0 / 0.35)",
+        pop: "0 8px 24px -6px rgb(15 20 40 / 0.14), 0 2px 6px rgb(15 20 40 / 0.06)",
         glow: "0 0 0 1px rgb(var(--accent) / 0.35), 0 8px 24px -8px rgb(var(--accent) / 0.45)",
       },
       keyframes: {

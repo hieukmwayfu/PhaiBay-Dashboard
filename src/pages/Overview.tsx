@@ -36,13 +36,12 @@ export function Overview() {
       <ErrorBox error={ov.error} />
 
       {ov.data && t && t.events === 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Icon name="terminal" size={20} /></span>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-raised/60 px-4 py-3">
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold">Chưa có event trong khoảng này</div>
             <div className="text-xs muted">Gắn SDK vào game rồi xem event realtime ở DebugView.</div>
           </div>
-          <button className="btn" onClick={() => nav(`/app/${appId}/setup`)}>Hướng dẫn tích hợp <Icon name="arrowRight" size={15} /></button>
+          <button className="btn" onClick={() => nav(`/app/${appId}/setup`)}>Hướng dẫn tích hợp <Icon name="arrowRight" size={14} /></button>
         </div>
       )}
 
@@ -84,7 +83,7 @@ function TopCard({ dim, onPick }: { dim: Dim; onPick: (v: string) => void }) {
   const r = useLoad(() => api<BreakdownRow[]>("/api/breakdown", q({ dim, metric: dim === "event" ? "count" : "users", limit: 8 })), [q, dim]);
   const meta = TITLES[dim];
   return (
-    <Card title={<span className="inline-flex items-center gap-2"><Icon name={meta.icon} size={15} className="muted" />{meta.t}</span>} subtitle="Bấm 1 dòng để lọc">
+    <Card title={meta.t} subtitle="Bấm 1 dòng để lọc">
       <ErrorBox error={r.error} />
       <DataTable rows={r.data} loading={r.loading} onRow={(x) => onPick(x.value)} cols={[
         { key: "value", title: dim === "event" ? "Event" : "Giá trị", render: (x) => <span className="block max-w-[12rem] truncate" title={x.value}>{x.value}</span> },

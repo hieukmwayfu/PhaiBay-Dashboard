@@ -20,8 +20,8 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
-    <div className="relative pl-11">
-      <span className="absolute left-0 top-0 grid h-7 w-7 place-items-center rounded-lg bg-accent text-xs font-bold text-accent-fg shadow-glow">{n}</span>
+    <div className="relative pl-9">
+      <span className="absolute left-0 top-0 grid h-6 w-6 place-items-center rounded-full border border-line text-xs font-semibold muted">{n}</span>
       <h3 className="mb-2 pt-0.5 text-sm font-semibold">{title}</h3>
       {children}
     </div>

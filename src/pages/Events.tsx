@@ -76,9 +76,8 @@ export function Events() {
           toolbar={
             <>
               <div className="flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#8b5cf6]/10 text-[#8b5cf6]"><Icon name="list" size={16} /></span>
                 <div>
-                  <div className="text-[15px] font-semibold leading-tight">Tất cả events</div>
+                  <div className="text-[13px] font-semibold leading-tight">Tất cả events</div>
                   <div className="text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : "…"}</div>
                 </div>
               </div>

@@ -71,7 +71,7 @@ export function FilterDialog({ onClose }: { onClose: () => void }) {
           <input className="input w-full" value={val} autoFocus onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ok()} placeholder={kv ? "vd: 5" : "vd: VN,US"} />
         </label>
         {values.length > 0 && (
-          <div className="max-h-44 overflow-auto rounded-xl border border-line p-1">
+          <div className="max-h-44 overflow-auto rounded-md border border-line p-1">
             {values.slice(0, 50).map((v) => (
               <button key={v.value} type="button" onClick={() => toggle(v.value)}
                 className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-raised ${picked.has(v.value) ? "bg-accent/10" : ""}`}>

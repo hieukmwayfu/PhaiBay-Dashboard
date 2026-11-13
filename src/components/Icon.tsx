@@ -38,6 +38,7 @@ const P: Record<string, string> = {
   lock: "M6 11h12v10H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11",
   sparkles: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8zM5 2l.6 1.4L7 4l-1.4.6L5 6l-.6-1.4L3 4l1.4-.6z",
   chevronsLeft: "M11 17l-5-5 5-5M18 17l-5-5 5-5",
+  sidebar: "M4 5h16v14H4zM9.5 5v14",
 };
 
 export type IconName = keyof typeof P;
@@ -54,13 +55,7 @@ export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: { n
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
-      <defs>
-        <linearGradient id="pb-logo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8b80ff" />
-          <stop offset="1" stopColor="#e14bd2" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#pb-logo)" />
+      <rect width="32" height="32" rx="7" fill="rgb(var(--accent))" />
       <path d="M8 21.5l5.5-7 4 4.5L24 10" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
