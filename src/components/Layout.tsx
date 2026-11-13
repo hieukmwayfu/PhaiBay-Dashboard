@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { getServerUrl, storage } from "../lib/api";
 import { DIM_LABEL, OP_LABEL, RANGES, useDash, type RangeKey } from "../lib/state";
+import { AgentPanel } from "./AgentPanel";
 import { FilterDialog } from "./FilterDialog";
 import { Icon, Logo, type IconName } from "./Icon";
 
@@ -10,7 +11,6 @@ export const APP_NAV: { to: string; label: string; icon: IconName; end?: boolean
   { to: "events", label: "Events", icon: "list" },
   { to: "explore", label: "Explore", icon: "compass" },
   { to: "funnel", label: "Funnel", icon: "funnel" },
-  { to: "ai", label: "AI phân tích", icon: "sparkles" },
   { to: "debug", label: "DebugView", icon: "pulse" },
 ];
 
@@ -203,10 +203,18 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
   const [collapsed, setCollapsedS] = useState<boolean>(storage.get("side_collapsed", false));
   const setCollapsed = (v: boolean) => { setCollapsedS(v); storage.set("side_collapsed", v); };
   const t = useTitle();
+  const [agentOpen, setAgentOpenS] = useState<boolean>(storage.get("agent_open", false));
+  const setAgentOpen = (v: boolean) => { setAgentOpenS(v); storage.set("agent_open", v); };
   useEffect(() => setDrawer(false), [loc.pathname]);
 
   return (
-    <div className={`min-h-screen ${collapsed ? "lg:pl-[60px]" : "lg:pl-56"}`}>
+    <div className={`min-h-screen ${collapsed ? "lg:pl-[60px]" : "lg:pl-56"} ${agentOpen ? "xl:pr-[400px]" : ""}`}>
+      {/* AI agent panel (right) */}
+      {agentOpen && (
+        <aside className="fixed inset-y-0 right-0 z-40 w-full border-l border-line bg-surface shadow-pop sm:w-[400px] xl:shadow-none">
+          <AgentPanel onClose={() => setAgentOpen(false)} />
+        </aside>
+      )}
       {/* desktop sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-side-line bg-side lg:block ${collapsed ? "w-[60px]" : "w-56"}`}>
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} onLogout={onLogout} />
@@ -234,6 +242,9 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
           <h1 className="text-[22px] font-semibold tracking-tight">{t.title}</h1>
           <div className="ml-auto flex items-center gap-2">
             <button className="btn !px-2" title="Tải lại" onClick={d.refresh}><Icon name="refresh" size={15} /></button>
+            <button className={`btn ${agentOpen ? "!bg-raised" : ""}`} title="AI agent" onClick={() => setAgentOpen(!agentOpen)}>
+              <Icon name="sparkles" size={15} className="muted" /> AI
+            </button>
           </div>
         </div>
 
