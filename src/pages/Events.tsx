@@ -1,30 +1,101 @@
 import { useEffect, useState } from "react";
-import { api, type BreakdownRow, type EventRow, type ParamKey, type Timeseries } from "../lib/api";
+import { api, storage, type BreakdownRow, type ParamKey, type Timeseries } from "../lib/api";
 import { fmt } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
 import { TimeChart } from "../components/Charts";
 import { Card, DataTable, Empty, ErrorBox, Segmented } from "../components/ui";
 import { Icon } from "../components/Icon";
+import { PagedTable, type PCol } from "../components/PagedTable";
+
+interface EventPageRow { name: string; count: number; users: number; last_seen: number }
+interface EventPage { total: number; rows: EventPageRow[] }
+
+function ago(ms: number) {
+  if (!ms) return "–";
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 60) return `${s}s trước`;
+  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
+  if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
+  return `${Math.floor(s / 86400)} ngày trước`;
+}
+
+/** Debounced copy of a value (search box). */
+function useDebounced<T>(v: T, ms = 300) {
+  const [d, setD] = useState(v);
+  useEffect(() => {
+    const t = setTimeout(() => setD(v), ms);
+    return () => clearTimeout(t);
+  }, [v, ms]);
+  return d;
+}
 
 export function Events() {
   const { q } = useDash();
   const [sel, setSel] = useState<string>("");
-  const ev = useLoad(() => api<EventRow[]>("/api/events", q()), [q]);
+  const [search, setSearch] = useState("");
+  const term = useDebounced(search.trim());
+  const [sort, setSort] = useState("count");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [size, setSizeS] = useState<number>(storage.get("events_page_size", 20));
+  const setSize = (n: number) => { setSizeS(n); storage.set("events_page_size", n); setPage(1); };
+
+  // back to page 1 whenever the result set changes
+  useEffect(() => setPage(1), [q, term, sort, dir]);
+
+  const ev = useLoad(
+    () => api<EventPage>("/api/events/page", q({ q: term, sort, dir, offset: (page - 1) * size, limit: size })),
+    [q, term, sort, dir, page, size],
+  );
   useEffect(() => {
-    if (!sel && ev.data?.length) setSel(ev.data[0].name);
+    if (!sel && ev.data?.rows.length) setSel(ev.data.rows[0].name);
   }, [ev.data, sel]);
 
+  const onSort = (k: string) => {
+    if (k === sort) setDir(dir === "desc" ? "asc" : "desc");
+    else { setSort(k); setDir(k === "name" ? "asc" : "desc"); }
+  };
+
+  const cols: PCol<EventPageRow>[] = [
+    { key: "name", title: "Event", sortable: true, render: (r) => <span className="font-mono text-[13px]">{r.name}</span> },
+    { key: "count", title: "Số lần", sortable: true, num: true, bar: true, render: (r) => fmt(r.count) },
+    { key: "users", title: "Users", sortable: true, num: true, render: (r) => fmt(r.users) },
+    { key: "per_user", title: "/ user", sortable: true, num: true, render: (r) => (r.users ? (r.count / r.users).toFixed(2) : "–") },
+    { key: "last_seen", title: "Lần cuối", sortable: true, num: true, render: (r) => <span className="muted" title={new Date(r.last_seen).toLocaleString()}>{ago(r.last_seen)}</span> },
+  ];
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <Card title="Tất cả events" subtitle={ev.data ? `${ev.data.length} loại event` : undefined}>
+    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-2">
         <ErrorBox error={ev.error} />
-        <DataTable rows={ev.data} loading={ev.loading} onRow={(r) => setSel(r.name)} active={(r) => r.name === sel} maxHeight={680} cols={[
-          { key: "name", title: "Event", render: (r) => <span className={`font-mono text-[13px] ${r.name === sel ? "font-semibold" : ""}`}>{r.name}</span> },
-          { key: "count", title: "Số lần", num: true, bar: true, render: (r) => fmt(r.count) },
-          { key: "users", title: "Users", num: true, render: (r) => fmt(r.users) },
-          { key: "per", title: "/ user", num: true, render: (r) => (r.users ? (r.count / r.users).toFixed(2) : "–") },
-        ]} />
-      </Card>
+        <PagedTable<EventPageRow>
+          cols={cols} rows={ev.data?.rows} total={ev.data?.total ?? 0} loading={ev.loading}
+          page={page} pageSize={size} sort={sort} dir={dir}
+          onSort={onSort} onPage={setPage} onPageSize={setSize}
+          onRow={(r) => setSel(r.name)} active={(r) => r.name === sel} rowKey={(r) => r.name}
+          emptyText={term ? `Không có event nào chứa "${term}"` : "Chưa có event"}
+          toolbar={
+            <>
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#8b5cf6]/10 text-[#8b5cf6]"><Icon name="list" size={16} /></span>
+                <div>
+                  <div className="text-[15px] font-semibold leading-tight">Tất cả events</div>
+                  <div className="text-xs muted">{ev.data ? `${ev.data.total.toLocaleString()} loại event` : "…"}</div>
+                </div>
+              </div>
+              <div className="relative ml-auto w-full sm:w-64">
+                <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 muted" />
+                <input className="input w-full !pl-9 pr-8" placeholder="Tìm event…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                {search && (
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 muted hover:text-fg" onClick={() => setSearch("")} aria-label="Xóa tìm kiếm">
+                    <Icon name="x" size={14} />
+                  </button>
+                )}
+              </div>
+            </>
+          }
+        />
+      </div>
       {sel ? <EventDetail name={sel} /> : <Card><Empty icon="list">Chọn 1 event</Empty></Card>}
     </div>
   );

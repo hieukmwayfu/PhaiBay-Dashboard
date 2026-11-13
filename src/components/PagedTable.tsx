@@ -1,0 +1,140 @@
+import type { ReactNode } from "react";
+import { Icon } from "./Icon";
+import { Empty, Skeleton } from "./ui";
+
+export interface PCol<T> {
+  key: string;
+  title: string;
+  num?: boolean;
+  sortable?: boolean;
+  bar?: boolean; // inline bar proportional to the max of this column on the current page
+  width?: string;
+  render?: (row: T) => ReactNode;
+}
+
+export const PAGE_SIZES = [10, 20, 50, 100];
+
+/**
+ * Server-paged table (mobilehub style): toolbar slot, sortable gray header, divided rows,
+ * footer with rows-per-page, range and first / prev / page x of y / next / last.
+ */
+export function PagedTable<T>({
+  cols, rows, total, page, pageSize, sort, dir, loading, toolbar, emptyText = "Không có dữ liệu",
+  onSort, onPage, onPageSize, onRow, active, rowKey,
+}: {
+  cols: PCol<T>[];
+  rows: T[] | null | undefined;
+  total: number;
+  page: number; // 1-based
+  pageSize: number;
+  sort: string;
+  dir: "asc" | "desc";
+  loading?: boolean;
+  toolbar?: ReactNode;
+  emptyText?: ReactNode;
+  onSort: (key: string) => void;
+  onPage: (p: number) => void;
+  onPageSize: (n: number) => void;
+  onRow?: (r: T) => void;
+  active?: (r: T) => boolean;
+  rowKey: (r: T) => string;
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(total, page * pageSize);
+  const max: Record<string, number> = {};
+  for (const c of cols) if (c.bar) max[c.key] = Math.max(1, ...(rows ?? []).map((r) => Number((r as Record<string, unknown>)[c.key]) || 0));
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+      {toolbar && <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">{toolbar}</div>}
+
+      <div className="relative overflow-x-auto">
+        {loading && rows && <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-accent/20"><div className="h-full w-1/3 animate-shimmer bg-accent" /></div>}
+        <table className="w-full text-sm">
+          <thead className="border-b border-line bg-raised/60 text-xs font-semibold muted">
+            <tr>
+              {cols.map((c) => {
+                const on = sort === c.key;
+                return (
+                  <th key={c.key} style={c.width ? { width: c.width } : undefined}
+                    onClick={c.sortable ? () => onSort(c.key) : undefined}
+                    className={`select-none whitespace-nowrap px-4 py-3 ${c.num ? "text-right" : "text-left"} ${c.sortable ? "group cursor-pointer transition hover:bg-raised hover:text-fg" : ""} ${on ? "text-fg" : ""}`}>
+                    <span className={`inline-flex items-center gap-1 ${c.num ? "flex-row-reverse" : ""}`}>
+                      {c.title}
+                      {c.sortable && (
+                        on
+                          ? <Icon name={dir === "asc" ? "arrowUp" : "arrowDown"} size={13} strokeWidth={2.4} className="text-accent" />
+                          : <Icon name="arrowDown" size={13} className="opacity-0 transition group-hover:opacity-40" />
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line/70">
+            {!rows && loading && Array.from({ length: Math.min(pageSize, 8) }, (_, i) => (
+              <tr key={i}><td colSpan={cols.length} className="px-4 py-2.5"><Skeleton className="h-5 w-full" /></td></tr>
+            ))}
+            {rows?.map((r) => {
+              const on = active?.(r);
+              return (
+                <tr key={rowKey(r)} onClick={onRow ? () => onRow(r) : undefined}
+                  className={`${onRow ? "cursor-pointer" : ""} ${on ? "bg-accent/10" : "hover:bg-raised/60"} transition-colors`}>
+                  {cols.map((c, ci) => {
+                    const raw = (r as Record<string, unknown>)[c.key];
+                    const content = c.render ? c.render(r) : String(raw ?? "");
+                    if (c.bar) {
+                      const w = (100 * (Number(raw) || 0)) / max[c.key];
+                      return (
+                        <td key={c.key} className="relative min-w-[120px] whitespace-nowrap px-4 py-2.5 text-right tabular">
+                          <span className="absolute inset-y-2 left-2 rounded-md bg-accent/15" style={{ width: `calc(${w}% - 16px)` }} />
+                          <span className="relative font-medium">{content}</span>
+                        </td>
+                      );
+                    }
+                    return (
+                      <td key={c.key} className={`whitespace-nowrap px-4 py-2.5 ${c.num ? "text-right tabular" : ""} ${ci === 0 && on ? "font-semibold" : ""}`}>
+                        {content}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {rows && rows.length === 0 && <Empty>{emptyText}</Empty>}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 muted">
+            <span className="hidden sm:inline">Số dòng / trang</span>
+            <select className="input !h-8 !py-0" value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))}>
+              {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <span className="tabular muted">{from.toLocaleString()}–{to.toLocaleString()} / <b className="text-fg">{total.toLocaleString()}</b></span>
+        </div>
+        <div className="flex items-center gap-1">
+          <PageBtn icon="chevronsLeft" title="Trang đầu" disabled={page <= 1} onClick={() => onPage(1)} />
+          <PageBtn icon="back" title="Trang trước" disabled={page <= 1} onClick={() => onPage(page - 1)} />
+          <span className="mx-2 whitespace-nowrap font-medium tabular">Trang {page}/{pages}</span>
+          <PageBtn icon="chevron" title="Trang sau" disabled={page >= pages} onClick={() => onPage(page + 1)} />
+          <PageBtn icon="chevronsLeft" flip title="Trang cuối" disabled={page >= pages} onClick={() => onPage(pages)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageBtn({ icon, title, disabled, onClick, flip }: { icon: "chevronsLeft" | "back" | "chevron"; title: string; disabled: boolean; onClick: () => void; flip?: boolean }) {
+  return (
+    <button title={title} disabled={disabled} onClick={onClick}
+      className="grid h-8 w-8 place-items-center rounded-lg muted transition hover:bg-raised hover:text-fg disabled:pointer-events-none disabled:opacity-30">
+      <Icon name={icon} size={16} className={flip ? "rotate-180" : ""} />
+    </button>
+  );
+}
