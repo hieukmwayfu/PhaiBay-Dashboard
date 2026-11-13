@@ -33,7 +33,7 @@ interface Ctx {
   apps: App[];
   setApps: (a: App[]) => void;
   appId: number | null;
-  setAppId: (id: number) => void;
+  setAppId: (id: number | null) => void;
   range: RangeKey;
   setRange: (r: RangeKey) => void;
   custom: { from: string; to: string };
@@ -53,13 +53,17 @@ export const useDash = () => useContext(C);
 
 export function DashProvider({ children }: { children: ReactNode }) {
   const [apps, setApps] = useState<App[]>([]);
-  const [appId, setAppIdS] = useState<number | null>(storage.get("app", null));
+  const [appId, setAppIdS] = useState<number | null>(null); // driven by the /app/:appId route
   const [range, setRangeS] = useState<RangeKey>(storage.get("range", "7"));
   const [custom, setCustomS] = useState(storage.get("custom", rangeDates("7", "", "")));
   const [filters, setFiltersS] = useState<Filter[]>(storage.get("filters", []));
   const [version, setVersion] = useState(0);
 
-  const setAppId = (id: number) => { setAppIdS(id); storage.set("app", id); };
+  // filters (version, params, ...) are app specific: reset them when switching app
+  const setAppId = (id: number | null) => {
+    if (appId !== null && id !== null && appId !== id) setFilters([]);
+    setAppIdS(id);
+  };
   const setRange = (r: RangeKey) => { setRangeS(r); storage.set("range", r); };
   const setCustom = (c: { from: string; to: string }) => { setCustomS(c); storage.set("custom", c); };
   const setFilters = (f: Filter[]) => { setFiltersS(f); storage.set("filters", f); };
@@ -68,11 +72,6 @@ export function DashProvider({ children }: { children: ReactNode }) {
     const rest = f.dim === "p" || f.dim === "u" ? filters : filters.filter((x) => x.dim !== f.dim);
     setFilters([...rest, f]);
   };
-
-  // keep selected app valid
-  useEffect(() => {
-    if (apps.length && !apps.some((a) => a.id === appId)) setAppId(apps[0].id);
-  }, [apps, appId]);
 
   const dates = useMemo(() => rangeDates(range, custom.from, custom.to), [range, custom]);
 

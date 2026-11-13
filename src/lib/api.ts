@@ -131,7 +131,9 @@ export async function api<T>(path: string, query: Query = {}, init: RequestInit 
 }
 
 // ---------- types ----------
-export interface App { id: number; name: string; api_key: string; created_at: number }
+export interface App { id: number; name: string; app_key: string; created_at: number }
+export interface AppSummary extends App { events: number; users: number; new_users: number; sessions: number; last_event_at: number; daily_users: number[] }
+export interface AppsSummary { from: string; to: string; labels: string[]; apps: AppSummary[] }
 export interface OverviewPoint { day: string; events: number; users: number; new_users: number; sessions: number; engagement_ms_per_user: number }
 export interface Overview { totals: OverviewPoint; series: OverviewPoint[]; from: string; to: string }
 export interface EventRow { name: string; count: number; users: number }
@@ -163,10 +165,11 @@ export async function logout() {
   setToken("");
 }
 export const me = () => api<{ username: string }>("/api/auth/me");
-export const changePassword = (old_password: string, new_password: string, new_username?: string) =>
-  api("/api/auth/password", {}, { method: "POST", body: JSON.stringify({ old_password, new_password, new_username }) });
 
 // ---------- apps ----------
+export const APP_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{2,99}$/;
 export const listApps = () => api<App[]>("/api/apps");
-export const createApp = (name: string) => api<App>("/api/apps", {}, { method: "POST", body: JSON.stringify({ name }) });
-export const rotateKey = (id: number) => api<{ api_key: string }>(`/api/apps/${id}/rotate`, {}, { method: "POST" });
+/** appKey empty = server generates one. The key can never be changed afterwards. */
+export const createApp = (name: string, appKey: string) =>
+  api<App>("/api/apps", {}, { method: "POST", body: JSON.stringify({ name, app_key: appKey }) });
+export const appsSummary = (from: string, to: string) => api<AppsSummary>("/api/apps/summary", { from, to });

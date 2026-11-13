@@ -19,7 +19,7 @@ export function Overview() {
         <Kpi label="Sessions" value={fmt(t?.sessions)} />
         <Kpi label="Events" value={fmt(t?.events)} />
         <Kpi label="Events / user" value={t?.users ? (t.events / t.users).toFixed(1) : "–"} />
-        <Kpi label="Engagement TB / user" value={t ? dur(t.engagement_ms_per_user) : "–"} />
+        <Kpi label="Engagement TB / user" value={t?.engagement_ms_per_user ? dur(t.engagement_ms_per_user) : "–"} />
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Người dùng theo ngày">

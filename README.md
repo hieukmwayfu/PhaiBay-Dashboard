@@ -2,7 +2,7 @@
 
 Dashboard cho PhaiBay Analytics — React + Vite + TypeScript + Tailwind CSS + Recharts.
 
-Tính năng: tổng quan (users, new users, sessions, engagement), danh sách events + chi tiết param, Explore (metric × breakdown), Funnel, Retention cohort, DebugView realtime, quản lý app / API key, đổi mật khẩu admin. Filter theo ngày, app version, country, platform, OS, device, ngôn ngữ, event param và user property.
+Tính năng: tổng quan (users, new users, sessions, engagement), danh sách events + chi tiết param, Explore (metric × breakdown), Funnel, Retention cohort, DebugView realtime, quản lý app (app key cố định, có thể là package name). Filter theo ngày, app version, country, platform, OS, device, ngôn ngữ, event param và user property.
 
 ## Chạy local
 
