@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { storage } from "../lib/api";
 import { useDash } from "../lib/state";
 import {
-  agentLogin, agentLogout, agentStatus, deleteReport, getReport, listReports, runAgent, setClaudeKey,
+  agentLogin, agentLogout, agentStatus, deleteReport, getReport, getRules, listReports, runAgent, saveRules, setClaudeKey,
   type AgentEvent, type AgentStatus, type Provider, type Report,
 } from "../lib/agent";
 import { Icon } from "./Icon";
@@ -29,7 +29,7 @@ export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text
   const [provider, setProviderS] = useState<Provider>(storage.get("agent_provider", "codex"));
   const setProvider = (p: Provider) => { setProviderS(p); storage.set("agent_provider", p); };
   const [status, setStatus] = useState<AgentStatus | null>(null);
-  const [tab, setTab] = useState<"chat" | "reports">("chat");
+  const [tab, setTab] = useState<"chat" | "reports" | "rules">("chat");
   const [err, setErr] = useState("");
 
   const refresh = () => agentStatus().then(setStatus).catch((e: Error) => setErr(e.message));
@@ -79,10 +79,10 @@ export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text
       {status && ready && app && (
         <>
           <div className="flex shrink-0 items-center gap-4 border-b border-line px-3">
-            {(["chat", "reports"] as const).map((t) => (
+            {(["chat", "reports", "rules"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className={`-mb-px border-b-2 py-2 text-[13px] ${tab === t ? "border-accent font-medium text-fg" : "border-transparent muted hover:text-fg"}`}>
-                {t === "chat" ? "Chat" : "Bản phân tích"}
+                {t === "chat" ? "Chat" : t === "reports" ? "Bản phân tích" : "Quy tắc"}
               </button>
             ))}
             <span className="ml-auto truncate text-xs muted" title={provider === "codex" ? status.codex.detail : "Anthropic API key"}>
@@ -94,6 +94,7 @@ export function AgentPanel({ onClose, ask }: { onClose: () => void; ask?: { text
             <Chat key={`${provider}-${app.id}`} provider={provider} appId={app.id} dates={dates} filters={q()} ask={ask} onReport={() => setTab("reports")} onDone={refresh} />
           </div>
           {tab === "reports" && <Reports appId={app.id} />}
+          {tab === "rules" && <RulesEditor appId={app.id} appName={app.name} />}
         </>
       )}
     </div>
@@ -302,7 +303,7 @@ function Chat({ provider, appId, dates, filters, onReport, ask, onDone }: {
       <div className="min-h-0 flex-1 space-y-5 overflow-auto px-3 py-4">
         {msgs.length === 0 && (
           <div className="space-y-4">
-            <p className="text-[13px] muted">Hỏi về dữ liệu của app. AI tự lấy số liệu qua công cụ đọc dữ liệu của PhaiBay. Cuộc chat không được lưu.</p>
+            <p className="text-[13px] muted">Hỏi về dữ liệu của app. AI tự lấy số liệu qua công cụ đọc dữ liệu của PhaiBay và đọc tab <b className="text-fg">Quy tắc</b> trước khi trả lời. Cuộc chat không được lưu.</p>
             <button className="btn w-full justify-start" onClick={() => send(ANALYZE_PROMPT, "analyze")}>
               <Icon name="sparkles" size={14} className="muted" /> Tạo bản phân tích (lưu lại)
             </button>
@@ -366,6 +367,84 @@ function argSummary(a: unknown) {
     .filter(([k]) => !["app_id", "from", "to"].includes(k))
     .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : v}`)
     .join(" ");
+}
+
+const RULES_TEMPLATE_APP = `## Ý nghĩa event
+- level_start: bắt đầu chơi 1 level (param level)
+- level_end: kết thúc level (param success = 1 thắng / 0 thua, stars)
+- ad_impression: hiện quảng cáo (param ad_format, value = doanh thu USD)
+- purchase: mua IAP (param value = USD, item_id)
+
+## KPI quan trọng
+- Tỉ lệ thắng = level_end có success=1 / level_start
+- Doanh thu = tổng value của purchase + ad_impression
+
+## Lưu ý
+- Version 1.2.x là bản mới nhất; version cũ hơn chỉ để so sánh
+- Bỏ qua event test_* khi phân tích
+`;
+
+const RULES_TEMPLATE_GLOBAL = `## Cách trả lời
+- Luôn nêu con số cụ thể và % so với kỳ trước
+- Kết thúc bằng 2-3 đề xuất hành động ngắn gọn
+- Không suy đoán khi thiếu dữ liệu, nói rõ cần event gì thêm
+`;
+
+/** AGENTS.md-style rules every agent run reads first (global + this app). */
+function RulesEditor({ appId, appName }: { appId: number; appName: string }) {
+  const [scope, setScope] = useState<"app" | "global">("app");
+  const [data, setData] = useState<{ global: string; app: string } | null>(null);
+  const [text, setText] = useState("");
+  const [preview, setPreview] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    getRules(appId).then((r) => { setData({ global: r.global, app: r.app }); }).catch((e: Error) => setErr(e.message));
+  }, [appId]);
+  useEffect(() => { if (data) setText(scope === "app" ? data.app : data.global); setMsg(""); }, [scope, data]);
+  const saved = data ? (scope === "app" ? data.app : data.global) : "";
+  const dirty = data !== null && text !== saved;
+
+  const save = async () => {
+    setErr("");
+    try {
+      await saveRules(scope, appId, text);
+      setData((d) => (d ? { ...d, [scope]: text } : d));
+      setMsg("Đã lưu. Áp dụng cho chat mới và lần phân tích tiếp theo.");
+    } catch (e) { setErr((e as Error).message); }
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+      <div className="flex items-center gap-2">
+        <Segmented value={scope} onChange={setScope} options={[{ v: "app", label: "App này" }, { v: "global", label: "Chung" }]} />
+        <button className="ml-auto text-xs muted hover:text-fg" onClick={() => setPreview(!preview)}>{preview ? "Sửa" : "Xem trước"}</button>
+      </div>
+      <p className="text-xs muted">
+        {scope === "app"
+          ? <>Quy tắc riêng cho <b className="text-fg">{appName}</b>: ý nghĩa event / param, KPI, lưu ý… AI đọc trước mỗi lần làm việc (giống AGENTS.md).</>
+          : <>Quy tắc chung cho mọi app: cách trả lời, định dạng, ưu tiên… Nếu mâu thuẫn, quy tắc riêng app được ưu tiên.</>}
+      </p>
+      {err && <ErrorBox error={err} />}
+      {!data ? <Loading on /> : preview ? (
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-line p-3">
+          {text.trim() ? <Markdown text={text} /> : <p className="text-xs muted">Trống</p>}
+        </div>
+      ) : (
+        <textarea className="input min-h-[240px] w-full flex-1 resize-none py-2 font-mono text-[12.5px] leading-relaxed" spellCheck={false}
+          value={text} onChange={(e) => { setText(e.target.value); setMsg(""); }}
+          placeholder={scope === "app" ? "## Ý nghĩa event\n- level_start: …" : "## Cách trả lời\n- …"} />
+      )}
+      <div className="flex items-center gap-2">
+        {!text.trim() && !preview && (
+          <button className="btn" onClick={() => setText(scope === "app" ? RULES_TEMPLATE_APP : RULES_TEMPLATE_GLOBAL)}>Dùng mẫu</button>
+        )}
+        <span className="text-xs muted">{text.length.toLocaleString()} / 20.000</span>
+        <button className="btn-primary ml-auto" onClick={save} disabled={!dirty}>Lưu</button>
+      </div>
+      {msg && <p className="text-xs text-good">{msg}</p>}
+    </div>
+  );
 }
 
 function Reports({ appId }: { appId: number }) {

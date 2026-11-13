@@ -36,6 +36,10 @@ export const agentStatus = (fresh = false) => api<AgentStatus>("/api/agent/statu
 export const agentLogin = (provider: Provider) => api<{ url: string; code: string }>("/api/agent/login", {}, { method: "POST", body: JSON.stringify({ provider }) });
 export const agentLogout = (provider: Provider) => api("/api/agent/logout", {}, { method: "POST", body: JSON.stringify({ provider }) });
 export const setClaudeKey = (key: string) => api("/api/agent/claude-key", {}, { method: "POST", body: JSON.stringify({ key }) });
+export interface Rules { global: string; app: string; global_updated_at?: string; app_updated_at?: string }
+export const getRules = (app: number) => api<Rules>("/api/agent/rules", { app });
+export const saveRules = (scope: "global" | "app", app_id: number, text: string) =>
+  api("/api/agent/rules", {}, { method: "PUT", body: JSON.stringify({ scope, app_id, text }) });
 export const listReports = (app: number) => api<Report[]>("/api/reports", { app });
 export const getReport = (id: number) => api<Report>(`/api/reports/${id}`);
 export const deleteReport = (id: number) => api(`/api/reports/${id}`, {}, { method: "DELETE" });
