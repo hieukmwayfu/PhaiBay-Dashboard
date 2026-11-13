@@ -134,7 +134,7 @@ export async function api<T>(path: string, query: Query = {}, init: RequestInit 
 export interface App { id: number; name: string; app_key: string; created_at: number }
 export interface AppSummary extends App { events: number; users: number; new_users: number; sessions: number; last_event_at: number; daily_users: number[] }
 export interface AppsSummary { from: string; to: string; labels: string[]; apps: AppSummary[] }
-export interface OverviewPoint { day: string; events: number; users: number; new_users: number; sessions: number; engagement_ms_per_user: number }
+export interface OverviewPoint { day: string; events: number; users: number; new_users: number; sessions: number }
 export interface Overview { totals: OverviewPoint; series: OverviewPoint[]; from: string; to: string }
 export interface EventRow { name: string; count: number; users: number }
 export interface Series { name: string; total: number; values: number[] }
@@ -143,8 +143,6 @@ export interface BreakdownRow { value: string; metric: number; count: number; us
 export interface ValueRow { value: string; count: number }
 export interface ParamKey { key: string; count: number; numeric: boolean }
 export interface FunnelStep { name: string; users: number; conversion: number; step_conversion: number }
-export interface Cohort { day: string; size: number; retained: number[]; counts: number[] }
-export interface Retention { days: number; cohorts: Cohort[] }
 export interface RawEvent {
   id: number; ts: number; name: string; user_id: string; uid?: string; session_id?: string;
   app_version: string; platform: string; os: string; device: string; country: string; lang: string;

@@ -11,7 +11,6 @@ import { Overview } from "./pages/Overview";
 import { Events } from "./pages/Events";
 import { Explore } from "./pages/Explore";
 import { Funnel } from "./pages/Funnel";
-import { Retention } from "./pages/Retention";
 import { Debug } from "./pages/Debug";
 import { AppSetup } from "./pages/AppSetup";
 
@@ -33,7 +32,6 @@ function Shell({ onLogout }: { onLogout: () => void }) {
           <Route path="events" element={<Events />} />
           <Route path="explore" element={<Explore />} />
           <Route path="funnel" element={<Funnel />} />
-          <Route path="retention" element={<Retention />} />
           <Route path="debug" element={<Debug />} />
           <Route path="setup" element={<AppSetup />} />
         </Route>

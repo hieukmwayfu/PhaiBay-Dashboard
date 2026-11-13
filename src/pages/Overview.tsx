@@ -1,5 +1,5 @@
 import { api, type BreakdownRow, type Overview as OV } from "../lib/api";
-import { dur, fmt } from "../lib/format";
+import { fmt } from "../lib/format";
 import { useDash, useLoad, type Dim } from "../lib/state";
 import { TimeChart } from "../components/Charts";
 import { Card, DataTable, ErrorBox, Kpi } from "../components/ui";
@@ -13,13 +13,12 @@ export function Overview() {
   return (
     <div className="space-y-3">
       <ErrorBox error={ov.error} />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <Kpi label="Người dùng" value={fmt(t?.users)} />
         <Kpi label="User mới" value={fmt(t?.new_users)} />
         <Kpi label="Sessions" value={fmt(t?.sessions)} />
         <Kpi label="Events" value={fmt(t?.events)} />
         <Kpi label="Events / user" value={t?.users ? (t.events / t.users).toFixed(1) : "–"} />
-        <Kpi label="Engagement TB / user" value={t?.engagement_ms_per_user ? dur(t.engagement_ms_per_user) : "–"} />
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Người dùng theo ngày">

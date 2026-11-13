@@ -7,7 +7,6 @@ const TABS = [
   { to: "events", label: "Events" },
   { to: "explore", label: "Explore" },
   { to: "funnel", label: "Funnel" },
-  { to: "retention", label: "Retention" },
   { to: "debug", label: "DebugView" },
   { to: "setup", label: "Tích hợp SDK" },
 ];

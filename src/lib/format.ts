@@ -8,11 +8,6 @@ export const fmt = (n: number | null | undefined): string => {
 
 export const pct = (x: number) => (x * 100).toFixed(1) + "%";
 
-export const dur = (ms: number) => {
-  const s = Math.round(ms / 1000);
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-};
-
 export const PALETTE = [
   "#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#64748b",
   "#14b8a6", "#a855f7", "#eab308", "#0ea5e9", "#22c55e", "#f43f5e", "#6366f1", "#d946ef", "#78716c", "#0891b2",
