@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
-import { getServerUrl } from "../lib/api";
+import { getServerUrl, storage } from "../lib/api";
 import { DIM_LABEL, OP_LABEL, RANGES, useDash, type RangeKey } from "../lib/state";
 import { FilterDialog } from "./FilterDialog";
 import { Icon, Logo, type IconName } from "./Icon";
 
-export const APP_NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: "", label: "Tổng quan", icon: "chart", end: true },
-  { to: "events", label: "Events", icon: "list" },
-  { to: "explore", label: "Explore", icon: "compass" },
-  { to: "funnel", label: "Funnel", icon: "funnel" },
-  { to: "debug", label: "DebugView", icon: "pulse" },
-  { to: "setup", label: "Tích hợp SDK", icon: "code" },
+/** App sections. Each has its own icon color (white when active), like the mobilehub sidebar. */
+export const APP_NAV: { to: string; label: string; icon: IconName; color: string; end?: boolean }[] = [
+  { to: "", label: "Tổng quan", icon: "chart", color: "#6366f1", end: true },
+  { to: "events", label: "Events", icon: "list", color: "#8b5cf6" },
+  { to: "explore", label: "Explore", icon: "compass", color: "#3b82f6" },
+  { to: "funnel", label: "Funnel", icon: "funnel", color: "#f59e0b" },
+  { to: "ai", label: "AI phân tích", icon: "sparkles", color: "#ec4899" },
+  { to: "debug", label: "DebugView", icon: "pulse", color: "#10b981" },
+  { to: "setup", label: "Tích hợp SDK", icon: "code", color: "#64748b" },
 ];
 
 /** Closes when clicking outside or pressing Escape. */
@@ -29,7 +31,7 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
-function Initials({ name, size = 28 }: { name: string; size?: number }) {
+export function Initials({ name, size = 28 }: { name: string; size?: number }) {
   const hue = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   return (
     <span className="grid shrink-0 place-items-center rounded-lg text-[11px] font-bold text-white"
@@ -39,7 +41,7 @@ function Initials({ name, size = 28 }: { name: string; size?: number }) {
   );
 }
 
-function AppSwitcher({ onPick }: { onPick?: () => void }) {
+function AppSwitcher({ collapsed, onPick }: { collapsed: boolean; onPick?: () => void }) {
   const d = useDash();
   const nav = useNavigate();
   const p = usePopover();
@@ -47,17 +49,21 @@ function AppSwitcher({ onPick }: { onPick?: () => void }) {
   const go = (to: string) => { p.setOpen(false); onPick?.(); nav(to); };
   return (
     <div ref={p.ref} className="relative">
-      <button onClick={() => p.setOpen(!p.open)}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-surface p-2 text-left transition hover:bg-raised">
+      <button onClick={() => p.setOpen(!p.open)} title={app?.name ?? "Tất cả app"}
+        className={`flex w-full items-center gap-2.5 rounded-lg border border-side-line/70 bg-surface p-2 text-left shadow-sm transition hover:shadow-md ${collapsed ? "justify-center" : ""}`}>
         {app ? <Initials name={app.name} /> : <span className="grid h-7 w-7 place-items-center rounded-lg bg-raised"><Icon name="grid" size={15} /></span>}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{app ? app.name : "Tất cả app"}</span>
-          <span className="block truncate font-mono text-[11px] muted">{app ? app.app_key : `${d.apps.length} app`}</span>
-        </span>
-        <Icon name="chevron" size={14} className={`muted transition ${p.open ? "-rotate-90" : "rotate-90"}`} />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{app ? app.name : "Tất cả app"}</span>
+              <span className="block truncate font-mono text-[11px] muted">{app ? app.app_key : `${d.apps.length} app`}</span>
+            </span>
+            <Icon name="chevron" size={14} className={`muted transition ${p.open ? "-rotate-90" : "rotate-90"}`} />
+          </>
+        )}
       </button>
       {p.open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-80 overflow-auto rounded-xl border border-line bg-surface p-1 shadow-pop animate-fade-in">
+        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-80 w-60 overflow-auto rounded-xl border border-line bg-surface p-1 shadow-pop animate-fade-in">
           <button onClick={() => go("/")} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-raised">
             <Icon name="grid" size={15} className="muted" /> Tất cả app
             {!app && <Icon name="check" size={15} className="ml-auto text-accent" />}
@@ -76,23 +82,27 @@ function AppSwitcher({ onPick }: { onPick?: () => void }) {
   );
 }
 
-function NavItem({ to, icon, label, end, onClick }: { to: string; icon: IconName; label: string; end?: boolean; onClick?: () => void }) {
+function NavItem({ to, icon, label, color, end, collapsed, onClick }: {
+  to: string; icon: IconName; label: string; color: string; end?: boolean; collapsed: boolean; onClick?: () => void;
+}) {
   return (
-    <NavLink to={to} end={end} onClick={onClick}
-      className={({ isActive }) => `relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition
-        ${isActive ? "bg-accent/10 text-fg" : "text-dim hover:bg-raised hover:text-fg"}`}>
+    <NavLink to={to} end={end} onClick={onClick} title={collapsed ? label : undefined}
+      className={({ isActive }) => `flex items-center rounded-lg p-3 text-sm font-medium transition
+        ${collapsed ? "justify-center" : "gap-3.5"}
+        ${isActive ? "bg-nav-on text-white shadow-lg" : "text-fg hover:bg-surface hover:shadow-md"}`}>
       {({ isActive }) => (
         <>
-          {isActive && <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-accent" />}
-          <Icon name={icon} size={17} className={isActive ? "text-accent" : ""} />
-          {label}
+          <span style={{ color: isActive ? "#fff" : color }}><Icon name={icon} size={20} /></span>
+          {!collapsed && <span className="truncate">{label}</span>}
         </>
       )}
     </NavLink>
   );
 }
 
-function Sidebar({ onLogout, onNavigate }: { onLogout: () => void; onNavigate?: () => void }) {
+function Sidebar({ collapsed, onToggle, onLogout, onNavigate, mobile }: {
+  collapsed: boolean; onToggle?: () => void; onLogout: () => void; onNavigate?: () => void; mobile?: boolean;
+}) {
   const d = useDash();
   const inApp = useMatch("/app/:appId/*");
   const [dark, setDark] = useState(document.documentElement.classList.contains("dark"));
@@ -106,42 +116,54 @@ function Sidebar({ onLogout, onNavigate }: { onLogout: () => void; onNavigate?: 
   try { host = new URL(getServerUrl()).host; } catch { /* ignore */ }
 
   return (
-    <div className="flex h-full flex-col gap-5 p-4">
-      <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-1">
-        <Logo size={30} />
-        <span>
-          <span className="block text-[15px] font-extrabold leading-tight tracking-tight">PhaiBay</span>
-          <span className="block text-[11px] leading-tight muted">Analytics</span>
-        </span>
-      </Link>
+    <div className="flex h-full flex-col gap-4 p-4">
+      <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
+        {!collapsed && (
+          <Link to="/" onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-2.5 px-1">
+            <Logo size={30} />
+            <span className="min-w-0">
+              <span className="block text-[15px] font-extrabold leading-tight tracking-tight">PhaiBay</span>
+              <span className="block text-[11px] leading-tight muted">Analytics</span>
+            </span>
+          </Link>
+        )}
+        {!mobile && (
+          <button onClick={onToggle} className="rounded-full p-2 transition hover:bg-nav-on hover:text-white" title={collapsed ? "Mở rộng" : "Thu gọn"}>
+            <Icon name="menu" size={22} />
+          </button>
+        )}
+      </div>
 
-      <AppSwitcher onPick={onNavigate} />
+      <AppSwitcher collapsed={collapsed} onPick={onNavigate} />
 
-      <nav className="flex flex-col gap-0.5">
-        <NavItem to="/" end icon="home" label="Tất cả app" onClick={onNavigate} />
+      <nav className="flex flex-col gap-1.5">
+        <NavItem to="/" end icon="home" label="Tất cả app" color="#6366f1" collapsed={collapsed} onClick={onNavigate} />
         {inApp && d.appId != null && (
           <>
-            <div className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider muted">App</div>
+            {!collapsed ? <div className="mb-0.5 mt-3 px-3 text-[11px] font-semibold uppercase tracking-wider muted">App</div> : <div className="my-2 h-px bg-side-line" />}
             {APP_NAV.map((n) => (
-              <NavItem key={n.to} to={`/app/${d.appId}${n.to ? "/" + n.to : ""}`} end={n.end} icon={n.icon} label={n.label} onClick={onNavigate} />
+              <NavItem key={n.to} to={`/app/${d.appId}${n.to ? "/" + n.to : ""}`} end={n.end} icon={n.icon} label={n.label} color={n.color}
+                collapsed={collapsed} onClick={onNavigate} />
             ))}
           </>
         )}
       </nav>
 
       <div className="mt-auto space-y-2">
-        <div className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-xs" title={getServerUrl()}>
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-good opacity-50" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-good" />
-          </span>
-          <span className="min-w-0 flex-1 truncate font-mono muted">{host || "no server"}</span>
-        </div>
-        <div className="flex gap-1">
+        {!collapsed && (
+          <div className="flex items-center gap-2 rounded-lg border border-side-line/70 bg-surface px-3 py-2 text-xs" title={getServerUrl()}>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-good opacity-50" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-good" />
+            </span>
+            <span className="min-w-0 flex-1 truncate font-mono muted">{host || "no server"}</span>
+          </div>
+        )}
+        <div className={`flex gap-1 ${collapsed ? "flex-col" : ""}`}>
           <button className="btn-ghost flex-1" onClick={toggleTheme} title="Đổi giao diện sáng / tối">
-            <Icon name={dark ? "sun" : "moon"} size={16} /> {dark ? "Sáng" : "Tối"}
+            <Icon name={dark ? "sun" : "moon"} size={17} /> {!collapsed && (dark ? "Sáng" : "Tối")}
           </button>
-          <button className="btn-ghost flex-1" onClick={onLogout}><Icon name="logout" size={16} /> Thoát</button>
+          <button className="btn-ghost flex-1" onClick={onLogout} title="Đăng xuất"><Icon name="logout" size={17} /> {!collapsed && "Thoát"}</button>
         </div>
       </div>
     </div>
@@ -182,50 +204,63 @@ function RangePicker() {
   );
 }
 
-function useTitle(): { title: string; icon: IconName } {
+function useTitle(): { title: string; icon: IconName; color: string } {
   const loc = useLocation();
   const m = /^\/app\/\d+\/?([^/]*)/.exec(loc.pathname);
-  if (!m) return { title: "Tất cả app", icon: "home" };
+  if (!m) return { title: "Tất cả app", icon: "home", color: "#6366f1" };
   const n = APP_NAV.find((x) => x.to === m[1]) ?? APP_NAV[0];
-  return { title: n.label, icon: n.icon };
+  return { title: n.label, icon: n.icon, color: n.color };
 }
 
 export function Layout({ onLogout }: { onLogout: () => void }) {
   const d = useDash();
   const inApp = useMatch("/app/:appId/*");
   const loc = useLocation();
+  const nav = useNavigate();
   const [dlg, setDlg] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  const [collapsed, setCollapsedS] = useState<boolean>(storage.get("side_collapsed", false));
+  const setCollapsed = (v: boolean) => { setCollapsedS(v); storage.set("side_collapsed", v); };
   const t = useTitle();
   const app = d.apps.find((a) => a.id === d.appId);
   useEffect(() => setDrawer(false), [loc.pathname]);
+  const sideW = collapsed ? "lg:pl-[88px]" : "lg:pl-64";
 
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className={`min-h-screen transition-[padding] duration-200 ${sideW}`}>
       {/* desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-surface/60 backdrop-blur lg:block">
-        <Sidebar onLogout={onLogout} />
+      <aside className={`fixed inset-y-0 left-0 z-30 hidden border-r border-side-line bg-side shadow-sm transition-[width] duration-200 lg:block ${collapsed ? "w-[88px]" : "w-64"}`}>
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} onLogout={onLogout} />
       </aside>
 
       {/* mobile drawer */}
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setDrawer(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <aside className="absolute inset-y-0 left-0 w-72 border-r border-line bg-surface shadow-pop animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <Sidebar onLogout={onLogout} onNavigate={() => setDrawer(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <aside className="absolute inset-y-0 left-0 w-72 border-r border-side-line bg-side shadow-pop animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <Sidebar mobile collapsed={false} onLogout={onLogout} onNavigate={() => setDrawer(false)} />
           </aside>
         </div>
       )}
 
-      <header className="sticky top-0 z-20 border-b border-line bg-bg/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-20 border-b border-line bg-surface/70 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
           <button className="btn-ghost -ml-2 lg:hidden" onClick={() => setDrawer(true)} aria-label="Menu"><Icon name="menu" size={20} /></button>
-          <div className="flex min-w-0 items-center gap-2">
-            {app && <span className="hidden truncate text-sm muted sm:inline">{app.name}</span>}
-            {app && <Icon name="chevron" size={14} className="hidden muted sm:block" />}
-            <Icon name={t.icon} size={18} className="text-accent" />
-            <h1 className="truncate text-[15px] font-semibold">{t.title}</h1>
-          </div>
+          {/* breadcrumb */}
+          <nav className="flex min-w-0 items-center gap-1 text-sm font-medium muted" aria-label="Breadcrumb">
+            <button className="hidden hover:text-accent sm:inline" onClick={() => nav("/")}>PhaiBay</button>
+            {app && (
+              <>
+                <Icon name="chevron" size={15} className="hidden text-dim/60 sm:block" />
+                <button className="hidden truncate hover:text-accent sm:inline" onClick={() => nav(`/app/${app.id}`)}>{app.name}</button>
+              </>
+            )}
+            <Icon name="chevron" size={15} className="hidden text-dim/60 sm:block" />
+            <span className="flex min-w-0 items-center gap-1.5 font-semibold text-fg">
+              <span style={{ color: t.color }}><Icon name={t.icon} size={17} /></span>
+              <span className="truncate">{t.title}</span>
+            </span>
+          </nav>
           <div className="ml-auto flex items-center gap-2">
             <RangePicker />
             {inApp && (
@@ -240,7 +275,7 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {inApp && d.filters.length > 0 && (
-          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-1.5 px-4 pb-3 sm:px-6">
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-1.5 px-4 pb-3 sm:px-6 lg:px-8">
             {d.filters.map((f, i) => (
               <span key={i} className="chip pr-1">
                 <span className="muted">{f.dim === "p" ? `param.${f.key}` : f.dim === "u" ? `user.${f.key}` : DIM_LABEL[f.dim]}</span>
@@ -262,5 +297,5 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
 }
 
 export function Page({ children }: { children: ReactNode }) {
-  return <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6">{children}</main>;
+  return <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>;
 }

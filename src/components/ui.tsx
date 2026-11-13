@@ -40,22 +40,18 @@ export function Delta({ value }: { value: number | null }) {
   );
 }
 
-export function Kpi({ label, value, icon, change, spark, color = "#8b80ff", loading }: {
-  label: string; value: ReactNode; icon?: IconName; change?: number | null; spark?: number[]; color?: string; loading?: boolean;
+export function Kpi({ label, value, icon, change, spark, color = "#3b82f6", iconColor, loading }: {
+  label: string; value: ReactNode; icon?: IconName; change?: number | null; spark?: number[]; color?: string; iconColor?: string; loading?: boolean;
 }) {
   const id = "sp" + label.replace(/\W/g, "");
   return (
-    <div className="card relative overflow-hidden !p-4 animate-fade-in">
-      <div className="flex items-center gap-2 text-[13px] font-medium muted">
-        {icon && (
-          <span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: color + "1f", color }}>
-            <Icon name={icon} size={15} />
-          </span>
-        )}
+    <div className="card relative overflow-hidden !p-5 transition duration-200 animate-fade-in hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex items-center gap-2 text-sm font-medium muted">
+        {icon && <span style={{ color: iconColor ?? color }}><Icon name={icon} size={20} /></span>}
         {label}
       </div>
       <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1.5">
-        {loading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold leading-none tracking-tight tabular sm:text-[28px]">{value}</div>}
+        {loading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-semibold leading-none tracking-tight tabular sm:text-[27px]">{value}</div>}
         {!loading && <div className="mb-0.5"><Delta value={change ?? null} /></div>}
       </div>
       {spark && spark.length > 1 && (

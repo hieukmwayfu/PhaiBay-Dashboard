@@ -47,11 +47,11 @@ export function Overview() {
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <Kpi label="Người dùng" icon="users" value={fmt(t?.users)} change={delta(t?.users, p?.users)} spark={s.map((x) => x.users)} color={palette[0]} loading={loading} />
-        <Kpi label="User mới" icon="userPlus" value={fmt(t?.new_users)} change={delta(t?.new_users, p?.new_users)} spark={s.map((x) => x.new_users)} color={palette[0]} loading={loading} />
-        <Kpi label="Sessions" icon="layers" value={fmt(t?.sessions)} change={delta(t?.sessions, p?.sessions)} spark={s.map((x) => x.sessions)} color={palette[0]} loading={loading} />
-        <Kpi label="Events" icon="bolt" value={fmt(t?.events)} change={delta(t?.events, p?.events)} spark={s.map((x) => x.events)} color={palette[0]} loading={loading} />
-        <Kpi label="Events / user" icon="ratio" value={epu != null ? epu.toFixed(1) : "–"} change={delta(epu, epuPrev)} color={palette[0]} loading={loading} />
+        <Kpi label="Người dùng" icon="users" iconColor="#6366f1" value={fmt(t?.users)} change={delta(t?.users, p?.users)} spark={s.map((x) => x.users)} color={palette[0]} loading={loading} />
+        <Kpi label="User mới" icon="userPlus" iconColor="#ec4899" value={fmt(t?.new_users)} change={delta(t?.new_users, p?.new_users)} spark={s.map((x) => x.new_users)} color={palette[0]} loading={loading} />
+        <Kpi label="Sessions" icon="layers" iconColor="#8b5cf6" value={fmt(t?.sessions)} change={delta(t?.sessions, p?.sessions)} spark={s.map((x) => x.sessions)} color={palette[0]} loading={loading} />
+        <Kpi label="Events" icon="bolt" iconColor="#f59e0b" value={fmt(t?.events)} change={delta(t?.events, p?.events)} spark={s.map((x) => x.events)} color={palette[0]} loading={loading} />
+        <Kpi label="Events / user" icon="ratio" iconColor="#10b981" value={epu != null ? epu.toFixed(1) : "–"} change={delta(epu, epuPrev)} color={palette[0]} loading={loading} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

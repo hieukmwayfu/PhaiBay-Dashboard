@@ -4,14 +4,17 @@
 
 /* design tokens (RGB triplets so Tailwind can apply opacity) */
 :root {
-  --bg: 246 247 249;
+  --bg: 249 250 251;        /* gray-50 */
   --surface: 255 255 255;
-  --raised: 241 242 245;
-  --line: 228 229 234;
-  --fg: 17 18 23;
-  --dim: 107 110 124;
-  --accent: 99 91 255;
+  --raised: 243 244 246;    /* gray-100 */
+  --line: 229 231 235;      /* gray-200 */
+  --fg: 17 24 39;           /* gray-900 */
+  --dim: 75 85 99;          /* gray-600 */
+  --accent: 99 102 241;     /* indigo-500 */
   --accent-fg: 255 255 255;
+  --side: 245 245 244;      /* stone-100 sidebar */
+  --side-line: 209 213 219; /* gray-300 */
+  --nav-on: 55 65 81;       /* gray-700 active nav */
   --good: 16 163 102;
   --bad: 225 55 75;
   --warn: 214 140 10;
@@ -24,8 +27,11 @@
   --line: 40 40 52;
   --fg: 238 238 243;
   --dim: 145 147 163;
-  --accent: 139 128 255;
+  --accent: 129 140 248;
   --accent-fg: 12 10 30;
+  --side: 15 15 20;
+  --side-line: 40 40 52;
+  --nav-on: 55 55 72;
   --good: 52 211 153;
   --bad: 251 113 133;
   --warn: 251 191 36;
@@ -41,22 +47,22 @@
 }
 
 @layer components {
-  .card { @apply rounded-2xl border border-line bg-surface p-5 shadow-card; }
-  .card-title { @apply text-[13px] font-semibold text-fg; }
+  .card { @apply rounded-xl border border-line bg-surface p-5 shadow-sm; }
+  .card-title { @apply text-[15px] font-semibold text-fg; }
   .muted { @apply text-dim; }
   .btn {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-medium text-fg
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-fg shadow-sm
       transition hover:bg-raised active:scale-[.98] disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-ghost {
     @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl px-2.5 text-sm font-medium text-dim transition hover:bg-raised hover:text-fg;
   }
   .btn-primary {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-3.5 text-sm font-semibold text-accent-fg shadow-glow
-      transition hover:brightness-110 active:scale-[.98] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-fg shadow-sm
+      transition hover:shadow-md hover:brightness-105 active:scale-[.98] disabled:pointer-events-none disabled:opacity-50;
   }
   .input {
-    @apply h-9 rounded-xl border border-line bg-surface px-3 text-sm text-fg outline-none transition placeholder:text-dim/70
+    @apply h-9 rounded-lg border border-line bg-surface px-3 text-sm text-fg outline-none transition placeholder:text-dim/70
       focus:border-accent focus:ring-4 focus:ring-accent/15;
   }
   select.input {

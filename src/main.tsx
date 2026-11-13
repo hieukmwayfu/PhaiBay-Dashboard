@@ -4,7 +4,8 @@ import App from "./App";
 import "./index.css";
 
 try {
-  if (localStorage.getItem("pb_theme") === "light") document.documentElement.classList.remove("dark");
+  // light by default; dark only when the viewer picked it
+  if (localStorage.getItem("pb_theme") === "dark") document.documentElement.classList.add("dark");
 } catch {
   /* ignore */
 }

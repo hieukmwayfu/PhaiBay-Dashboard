@@ -37,10 +37,10 @@ export function Home() {
       <ErrorBox error={r.error} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Người dùng" icon="users" value={fmt(tot.users)} spark={daily} color={palette[0]} loading={loading} />
-        <Kpi label="User mới" icon="userPlus" value={fmt(tot.new_users)} color={palette[0]} loading={loading} />
-        <Kpi label="Sessions" icon="layers" value={fmt(tot.sessions)} color={palette[0]} loading={loading} />
-        <Kpi label="Events" icon="bolt" value={fmt(tot.events)} color={palette[0]} loading={loading} />
+        <Kpi label="Người dùng" icon="users" iconColor="#6366f1" value={fmt(tot.users)} spark={daily} color={palette[0]} loading={loading} />
+        <Kpi label="User mới" icon="userPlus" iconColor="#ec4899" value={fmt(tot.new_users)} color={palette[0]} loading={loading} />
+        <Kpi label="Sessions" icon="layers" iconColor="#8b5cf6" value={fmt(tot.sessions)} color={palette[0]} loading={loading} />
+        <Kpi label="Events" icon="bolt" iconColor="#f59e0b" value={fmt(tot.events)} color={palette[0]} loading={loading} />
       </div>
 
       <div className="mb-3 flex items-center gap-2">
