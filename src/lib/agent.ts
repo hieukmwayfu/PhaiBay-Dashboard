@@ -1,5 +1,20 @@
 // Client for the server-side AI agent (Codex / Claude Code running next to the PhaiBay server).
-import { api, getServerUrl, getToken } from "./api";
+import { api, getServerUrl, getToken, storage } from "./api";
+
+/**
+ * Per-browser agent profile: each person who opens the dashboard signs in to THEIR OWN ChatGPT
+ * account (or uses their own Anthropic key). The server keeps credentials per profile id.
+ */
+export function agentProfileId(): string {
+  let id = storage.get("agent_profile", "");
+  if (!/^[a-f0-9]{32}$/.test(id)) {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    id = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+    storage.set("agent_profile", id);
+  }
+  return id;
+}
+const P = () => ({ "X-PB-Agent-Profile": agentProfileId() });
 
 export type Provider = "codex" | "claude";
 
@@ -32,10 +47,10 @@ export interface Report {
   prompt?: string; content?: string; from: string; to: string; created_at: number;
 }
 
-export const agentStatus = (fresh = false) => api<AgentStatus>("/api/agent/status", fresh ? { fresh: 1 } : {});
-export const agentLogin = (provider: Provider) => api<{ url: string; code: string }>("/api/agent/login", {}, { method: "POST", body: JSON.stringify({ provider }) });
-export const agentLogout = (provider: Provider) => api("/api/agent/logout", {}, { method: "POST", body: JSON.stringify({ provider }) });
-export const setClaudeKey = (key: string) => api("/api/agent/claude-key", {}, { method: "POST", body: JSON.stringify({ key }) });
+export const agentStatus = (fresh = false) => api<AgentStatus>("/api/agent/status", fresh ? { fresh: 1 } : {}, { headers: P() });
+export const agentLogin = (provider: Provider) => api<{ url: string; code: string }>("/api/agent/login", {}, { method: "POST", body: JSON.stringify({ provider }), headers: P() });
+export const agentLogout = (provider: Provider) => api("/api/agent/logout", {}, { method: "POST", body: JSON.stringify({ provider }), headers: P() });
+export const setClaudeKey = (key: string) => api("/api/agent/claude-key", {}, { method: "POST", body: JSON.stringify({ key }), headers: P() });
 export interface Rules { global: string; app: string; global_updated_at?: string; app_updated_at?: string }
 export const getRules = (app: number) => api<Rules>("/api/agent/rules", { app });
 export const saveRules = (scope: "global" | "app", app_id: number, text: string) =>
@@ -53,7 +68,7 @@ export interface RunBody {
 export async function runAgent(body: RunBody, onEvent: (e: AgentEvent) => void, signal: AbortSignal) {
   const r = await fetch(new URL("/api/agent/run", getServerUrl()), {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken() },
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + getToken(), ...P() },
     body: JSON.stringify(body),
     signal,
   });

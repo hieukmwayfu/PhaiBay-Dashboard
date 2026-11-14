@@ -180,7 +180,7 @@ function CodexLogin({ status, onChange }: { status: AgentStatus; onChange: () =>
     <div className="space-y-4 p-4">
       <div>
         <div className="text-[15px] font-semibold">Đăng nhập Codex</div>
-        <p className="mt-1 text-[13px] muted">Dùng tài khoản ChatGPT của bạn. Agent chạy trên máy chủ PhaiBay và chỉ đọc được dữ liệu analytics.</p>
+        <p className="mt-1 text-[13px] muted">Mỗi người đăng nhập tài khoản ChatGPT của riêng mình; quota được tính vào tài khoản đó. Đăng nhập này chỉ áp dụng cho trình duyệt hiện tại. Agent chạy trên máy chủ PhaiBay và chỉ đọc được dữ liệu analytics.</p>
       </div>
       {err && <ErrorBox error={err} />}
       {status.codex.login_error && <ErrorBox error={status.codex.login_error} />}
@@ -227,7 +227,7 @@ function ClaudeSetup({ status, onChange }: { status: AgentStatus; onChange: () =
   return (
     <div className="space-y-3 p-4 text-[13px]">
       <div className="text-[15px] font-semibold">Anthropic API key</div>
-      <p className="muted">Lấy ở console.anthropic.com. Key lưu trên server PhaiBay, chỉ dùng để chạy Claude Code.</p>
+      <p className="muted">Lấy ở console.anthropic.com. Key của riêng bạn, gắn với trình duyệt này; lưu trên server PhaiBay và chỉ dùng để chạy Claude Code cho bạn.</p>
       <input className="input w-full font-mono" type="password" placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} />
       {err && <ErrorBox error={err} />}
       <button className="btn-primary w-full" onClick={save} disabled={!key.trim()}>Lưu key</button>
