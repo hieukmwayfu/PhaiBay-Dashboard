@@ -22,7 +22,9 @@ export const storage = LS;
 const IS_LOCAL_PAGE = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 // Build-time default. On a deployed dashboard without VITE_API_URL there is no sensible default:
 // "localhost" would point at the viewer's own machine.
-const ENV_URL = (import.meta.env.VITE_API_URL as string | undefined) || (IS_LOCAL_PAGE ? "http://localhost:8080" : "");
+// VITE_API_URL=same-origin: the dashboard is served by the same host as the API (VPS behind Caddy).
+const RAW_ENV_URL = import.meta.env.VITE_API_URL as string | undefined;
+const ENV_URL = RAW_ENV_URL === "same-origin" ? location.origin : RAW_ENV_URL || (IS_LOCAL_PAGE ? "http://localhost:8080" : "");
 
 /** "abc.trycloudflare.com/" -> "https://abc.trycloudflare.com" */
 export function normalizeServerUrl(u: string): string {
