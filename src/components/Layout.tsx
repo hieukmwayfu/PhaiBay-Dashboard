@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from "react
 import { getServerUrl, storage } from "../lib/api";
 import { DIM_LABEL, OP_LABEL, RANGES, useDash, type RangeKey } from "../lib/state";
 import { AgentPanel } from "./AgentPanel";
+import { DeleteToasts } from "./DeleteEvents";
 import { FilterDialog } from "./FilterDialog";
 import { Icon, Logo, type IconName } from "./Icon";
 
@@ -12,8 +13,11 @@ export const APP_NAV: { to: string; label: string; icon: IconName; end?: boolean
   { to: "explore", label: "Explore", icon: "compass" },
   { to: "funnel", label: "Funnel", icon: "funnel" },
   { to: "dashboards", label: "Dashboards", icon: "grid" },
+  { to: "settings", label: "Cài đặt", icon: "settings" },
   { to: "debug", label: "DebugView", icon: "pulse" },
 ];
+
+export const SDK_GITHUB_URL = "https://github.com/hieukmwayfu/PhaiBay-UnitySDK";
 
 /** Closes when clicking outside or pressing Escape. */
 function usePopover() {
@@ -142,6 +146,11 @@ function Sidebar({ collapsed, onToggle, onLogout, onNavigate, mobile }: {
             <span className="min-w-0 truncate font-mono">{host || "no server"}</span>
           </div>
         )}
+        <a href={SDK_GITHUB_URL} target="_blank" rel="noopener noreferrer" title={collapsed ? "Unity SDK trên GitHub" : SDK_GITHUB_URL}
+          className={`group flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-fg/80 transition-colors hover:bg-raised ${collapsed ? "justify-center" : ""}`}>
+          <Icon name="github" size={16} className="text-dim" />
+          {!collapsed && <>Unity SDK <Icon name="external" size={12} className="ml-auto text-dim opacity-0 transition-opacity group-hover:opacity-100" /></>}
+        </a>
         <button className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-fg/80 hover:bg-raised ${collapsed ? "justify-center" : ""}`} onClick={toggleTheme}>
           <Icon name={dark ? "sun" : "moon"} size={16} className="text-dim" /> {!collapsed && (dark ? "Giao diện sáng" : "Giao diện tối")}
         </button>
@@ -303,10 +312,11 @@ export function Layout({ onLogout }: { onLogout: () => void }) {
 
       <Outlet />
       {dlg && <FilterDialog onClose={() => setDlg(false)} />}
+      <DeleteToasts />
     </div>
   );
 }
 
 export function Page({ children }: { children: ReactNode }) {
-  return <main className="mx-auto max-w-[1360px] px-4 pb-10 pt-4 sm:px-6 lg:px-8">{children}</main>;
+  return <main className="mx-auto max-w-[1360px] animate-fade-up px-4 pb-10 pt-4 sm:px-6 lg:px-8">{children}</main>;
 }

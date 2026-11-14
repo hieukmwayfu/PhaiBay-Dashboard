@@ -51,11 +51,10 @@ export function normalizeServerUrl(u: string): string {
 })();
 
 export function getServerUrl(): string {
-  const saved = LS.get("server", ENV_URL);
-  // A saved URL equal to this page's own origin is a leftover from a same-origin build
-  // (e.g. the Vercel host itself, which has no API): fall back to the build default.
-  if (!saved || (saved === location.origin && ENV_URL && ENV_URL !== location.origin)) return ENV_URL;
-  return saved;
+  // A deployed dashboard always talks to the server it was built for. An URL saved in the browser
+  // (old tunnel / localhost from testing) would silently show another database to this one person.
+  if (ENV_URL && !IS_LOCAL_PAGE) return ENV_URL;
+  return LS.get("server", ENV_URL) || ENV_URL;
 }
 export function setServerUrl(u: string) {
   LS.set("server", normalizeServerUrl(u) || ENV_URL);
@@ -176,4 +175,8 @@ export const listApps = () => api<App[]>("/api/apps");
 /** appKey empty = server generates one. The key can never be changed afterwards. */
 export const createApp = (name: string, appKey: string) =>
   api<App>("/api/apps", {}, { method: "POST", body: JSON.stringify({ name, app_key: appKey }) });
+export interface DeleteEventsResult { dry_run: boolean; total: number; names: { name: string; count: number }[] }
+/** dry_run = only count. from/to both empty = all time. */
+export const deleteEvents = (body: { app_id: number; names: string[]; from?: string; to?: string; dry_run?: boolean }) =>
+  api<DeleteEventsResult>("/api/events/delete", {}, { method: "POST", body: JSON.stringify(body) });
 export const appsSummary = (from: string, to: string) => api<AppsSummary>("/api/apps/summary", { from, to });

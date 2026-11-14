@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Settings } from "./pages/Settings";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { getToken, listApps, logout, setToken, setUnauthorizedHandler } from "./lib/api";
 import { DashProvider, useDash } from "./lib/state";
@@ -34,6 +35,7 @@ function Shell({ onLogout }: { onLogout: () => void }) {
           <Route path="explore" element={<Explore />} />
           <Route path="funnel" element={<Funnel />} />
           <Route path="dashboards" element={<Dashboards />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="debug" element={<Debug />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

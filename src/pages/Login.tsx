@@ -4,7 +4,8 @@ import { Logo } from "../components/Icon";
 
 export function Login({ onDone }: { onDone: () => void }) {
   const [server, setServer] = useState(getServerUrl());
-  const [editServer, setEditServer] = useState(!getServerUrl());
+  // the server is built in (VITE_API_URL); the field only shows when a build has none
+  const editServer = !getServerUrl();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -35,7 +36,7 @@ export function Login({ onDone }: { onDone: () => void }) {
         <Logo size={26} />
         <span className="text-[17px] font-semibold">PhaiBay</span>
       </div>
-      <form onSubmit={submit} className="w-full max-w-[380px] space-y-4 rounded-lg border border-line bg-surface p-6">
+      <form onSubmit={submit} className="w-full max-w-[380px] animate-pop-in space-y-4 rounded-lg border border-line bg-surface p-6">
         <h1 className="text-[17px] font-semibold">Đăng nhập</h1>
         {editServer ? (
           <label className="block">
@@ -43,13 +44,7 @@ export function Login({ onDone }: { onDone: () => void }) {
             <input className="input w-full font-mono text-[12.5px]" value={server} onChange={(e) => setServer(e.target.value)} placeholder="https://phaibay.example.com" required />
             {warn && <span className="mt-1 block text-xs text-warn">{warn}</span>}
           </label>
-        ) : (
-          // server known (same host as the dashboard, or chosen before): no need to type it
-          <div className="flex items-center gap-2 text-xs muted">
-            <span className="truncate">Server: <span className="font-mono">{hostOf(server)}</span></span>
-            <button type="button" className="ml-auto shrink-0 hover:text-fg" onClick={() => setEditServer(true)}>Đổi</button>
-          </div>
-        )}
+        ) : null}
         <label className="block">
           <span className="label">Tên đăng nhập</span>
           <input className="input w-full" value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus />
@@ -64,8 +59,4 @@ export function Login({ onDone }: { onDone: () => void }) {
       <p className="mt-4 text-xs muted">Analytics tự host cho game</p>
     </div>
   );
-}
-
-function hostOf(u: string) {
-  try { return new URL(u).host; } catch { return u; }
 }

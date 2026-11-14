@@ -4,7 +4,7 @@ import { Empty, Skeleton } from "./ui";
 
 export interface PCol<T> {
   key: string;
-  title: string;
+  title: ReactNode;
   num?: boolean;
   sortable?: boolean;
   bar?: boolean; // inline bar proportional to the max of this column on the current page
@@ -99,7 +99,7 @@ export function PagedTable<T>({
               return (
                 <Fragment key={rowKey(r)}>
                 <tr onClick={onRow ? () => onRow(r) : undefined}
-                  className={`${onRow ? "cursor-pointer" : ""} ${on ? "bg-raised" : "hover:bg-raised/70"} transition-colors`}>
+                  className={`animate-fade-in ${onRow ? "cursor-pointer" : ""} ${on ? "bg-raised" : "hover:bg-raised/70"} transition-colors`}>
                   {cols.map((c, ci) => {
                     const raw = (r as Record<string, unknown>)[c.key];
                     const content = c.render ? c.render(r) : String(raw ?? "");

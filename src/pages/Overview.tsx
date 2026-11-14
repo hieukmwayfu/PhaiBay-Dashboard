@@ -2,7 +2,7 @@ import { api, type BreakdownRow, type Overview as OV } from "../lib/api";
 import { fmt, useChartTheme } from "../lib/format";
 import { useDash, useLoad, type Dim } from "../lib/state";
 import { TimeChart } from "../components/Charts";
-import { Card, CopyButton, DataTable, delta, ErrorBox, Kpi } from "../components/ui";
+import { Card, DataTable, delta, ErrorBox, Kpi, SecretKey } from "../components/ui";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -42,14 +42,13 @@ export function Overview() {
           {app && (
             <div className="flex items-center gap-1 rounded-md border border-line bg-surface py-0.5 pl-2.5 pr-0.5">
               <span className="text-xs muted">App key</span>
-              <code className="font-mono text-xs">{app.app_key}</code>
-              <CopyButton text={app.app_key} />
+              <SecretKey value={app.app_key} />
             </div>
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
+      <div className="stagger grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
         <Kpi label="Người dùng" icon="users" iconColor="#6366f1" value={fmt(t?.users)} change={delta(t?.users, p?.users)} spark={s.map((x) => x.users)} color={palette[0]} loading={loading} />
         <Kpi label="User mới" icon="userPlus" iconColor="#ec4899" value={fmt(t?.new_users)} change={delta(t?.new_users, p?.new_users)} spark={s.map((x) => x.new_users)} color={palette[0]} loading={loading} />
         <Kpi label="Sessions" icon="layers" iconColor="#8b5cf6" value={fmt(t?.sessions)} change={delta(t?.sessions, p?.sessions)} spark={s.map((x) => x.sessions)} color={palette[0]} loading={loading} />
@@ -57,7 +56,7 @@ export function Overview() {
         <Kpi label="Events / user" icon="ratio" iconColor="#10b981" value={epu != null ? epu.toFixed(1) : "–"} change={delta(epu, epuPrev)} color={palette[0]} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,440px),1fr))] gap-4">
+      <div className="stagger grid grid-cols-[repeat(auto-fit,minmax(min(100%,440px),1fr))] gap-4">
         <Card title="Người dùng theo ngày" subtitle="Active users và user mới">
           <TimeChart loading={ov.loading} labels={labels} series={[
             { name: "Active users", values: s.map((x) => x.users) },
@@ -69,7 +68,7 @@ export function Overview() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4">
+      <div className="stagger grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4">
         {(["event", "country", "version", "platform"] as Dim[]).map((dim) => (
           <TopCard key={dim} dim={dim} onPick={(v) => addFilter({ dim, op: "eq", val: v })} />
         ))}

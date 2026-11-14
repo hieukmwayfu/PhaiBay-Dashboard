@@ -58,7 +58,7 @@ export function Kpi({ label, value, icon, change, loading, active, onClick }: {
       <span className="min-w-0">
         <span className="block truncate text-xs muted">{label}</span>
         <span className="mt-0.5 flex items-baseline gap-2">
-          {loading ? <Skeleton className="h-5 w-16" /> : <span className="text-[17px] font-semibold tabular">{value}</span>}
+          {loading ? <Skeleton className="h-5 w-16" /> : <span key={String(value)} className="animate-fade-in text-[17px] font-semibold tabular">{value}</span>}
           {!loading && <Delta value={change ?? null} />}
         </span>
       </span>
@@ -158,8 +158,8 @@ export function Modal({ title, onClose, children, width = "max-w-md" }: { title:
     return () => window.removeEventListener("keydown", k);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
-      <div className={`w-full ${width} rounded-t-lg border border-line bg-surface p-5 shadow-pop sm:rounded-lg`} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex animate-overlay-in items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
+      <div className={`w-full ${width} animate-pop-in rounded-t-lg border border-line bg-surface p-5 shadow-pop sm:rounded-lg`} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center">
           <h3 className="text-[15px] font-semibold">{title}</h3>
           <button className="btn-ghost ml-auto !h-7 !px-1.5" onClick={onClose} aria-label="Đóng"><Icon name="x" size={16} /></button>
@@ -191,6 +191,23 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
       <Icon name={ok ? "check" : "copy"} size={14} className={ok ? "text-good" : ""} />
       {label && (ok ? "Đã copy" : label)}
     </button>
+  );
+}
+
+/** App key etc.: masked until the eye is clicked; copy works either way. Clicks don't bubble (table rows). */
+export function SecretKey({ value, className = "" }: { value: string; className?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className={`inline-flex min-w-0 max-w-full items-center gap-0.5 ${className}`} onClick={(e) => e.stopPropagation()}>
+      <code key={String(show)} className="min-w-0 animate-fade-in truncate font-mono text-xs" title={show ? value : undefined}>
+        {show ? value : "•".repeat(Math.min(18, Math.max(10, value.length)))}
+      </code>
+      <button type="button" className="btn-ghost !h-7 !px-1.5" onClick={() => setShow(!show)}
+        aria-label={show ? "Ẩn app key" : "Hiện app key"} title={show ? "Ẩn" : "Hiện"}>
+        <Icon name={show ? "eyeOff" : "eye"} size={14} />
+      </button>
+      <CopyButton text={value} />
+    </span>
   );
 }
 

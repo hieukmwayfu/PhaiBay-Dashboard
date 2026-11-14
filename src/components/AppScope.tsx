@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { useDash } from "../lib/state";
 import { Page } from "./Layout";
 
@@ -7,6 +7,7 @@ import { Page } from "./Layout";
 export function AppScope() {
   const { appId: param } = useParams();
   const { apps, appId, setAppId } = useDash();
+  const { pathname } = useLocation();
   const id = Number(param);
   const app = apps.find((a) => a.id === id);
 
@@ -17,5 +18,5 @@ export function AppScope() {
 
   if (!app) return <Navigate to="/" replace />;
   // render pages only once the context points at this app, so no query runs for the previous one
-  return <Page>{appId === app.id && <Outlet />}</Page>;
+  return <Page>{appId === app.id && <div key={pathname} className="animate-fade-up"><Outlet /></div>}</Page>;
 }

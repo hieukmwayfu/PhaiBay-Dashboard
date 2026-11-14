@@ -2,6 +2,8 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { fmt, useChartTheme } from "../lib/format";
 import { Empty, Skeleton } from "./ui";
 
+const REDUCED = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export interface ChartSeries { name: string; values: number[] }
 
 const MAX_SERIES = 8; // categorical palette size; callers cap breakdowns at 8
@@ -80,7 +82,7 @@ export function TimeChart({ labels, series, height = 280, bars = false, loading 
               {grid}{xAxis}{yAxis}
               <Tooltip content={<ChartTooltip />} cursor={{ fill: chrome.cursor, fillOpacity: 0.25 }} />
               {shown.map((s, i) => (
-                <Bar key={s.name} dataKey={s.name} fill={colors[i]} radius={[4, 4, 0, 0]} maxBarSize={24} isAnimationActive={false} />
+                <Bar key={s.name} dataKey={s.name} fill={colors[i]} radius={[4, 4, 0, 0]} maxBarSize={24} animationDuration={550} animationEasing="ease-out" isAnimationActive={!REDUCED} />
               ))}
             </BarChart>
           ) : (
@@ -97,7 +99,7 @@ export function TimeChart({ labels, series, height = 280, bars = false, loading 
               <Tooltip content={<ChartTooltip />} cursor={{ stroke: chrome.cursor, strokeWidth: 1 }} />
               {shown.map((s, i) => (
                 <Area key={s.name} type="monotone" dataKey={s.name} stroke={colors[i]} strokeWidth={2} fill={`url(#fill-${i})`}
-                  dot={false} activeDot={{ r: 4.5, strokeWidth: 2, stroke: surface, fill: colors[i] }} isAnimationActive={false} />
+                  dot={false} activeDot={{ r: 4.5, strokeWidth: 2, stroke: surface, fill: colors[i] }} animationDuration={650} animationEasing="ease-out" isAnimationActive={!REDUCED} />
               ))}
             </AreaChart>
           )}

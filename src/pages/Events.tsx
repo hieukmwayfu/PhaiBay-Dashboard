@@ -5,6 +5,8 @@ import { fmt } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
 import { TimeChart } from "../components/Charts";
 import { DataTable, ErrorBox, Loading, Segmented } from "../components/ui";
+import { DeleteEventsDialog } from "../components/DeleteEvents";
+import { EVENTS_DELETED, usePendingDeletes } from "../lib/pendingDelete";
 import { Icon } from "../components/Icon";
 import { PagedTable, type PCol } from "../components/PagedTable";
 
@@ -34,7 +36,18 @@ function useDebounced<T>(v: T, ms = 300) {
 
 /** Events: list on top (scrolls, loads more at the end), selected event's detail below. */
 export function Events() {
-  const { q, version } = useDash();
+  const { q, version, appId } = useDash();
+  const [picked, setPicked] = useState<Set<string>>(new Set()); // events ticked for deletion
+  const [confirm, setConfirm] = useState<string[] | null>(null);
+  const pending = usePendingDeletes();
+  const queued = new Set(pending.filter((p) => p.appId === appId && (p.state === "waiting" || p.state === "running")).flatMap((p) => p.names));
+  useEffect(() => { setPicked(new Set()); }, [appId]);
+  useEffect(() => {
+    const f = () => setPicked(new Set());
+    window.addEventListener(EVENTS_DELETED, f);
+    return () => window.removeEventListener(EVENTS_DELETED, f);
+  }, []);
+  const toggle = (name: string) => setPicked((s) => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; });
   const [sel, setSel] = useState<string | null>(null); // event shown in the bottom panel
   const detailRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
@@ -95,11 +108,21 @@ export function Events() {
     else { setSort(k); setDir(k === "name" ? "asc" : "desc"); }
   };
 
+  const allPicked = !!rows?.length && rows.every((r) => picked.has(r.name));
   const cols: PCol<EventPageRow>[] = [
+    { key: "pick", width: "36px", title: (
+      <input type="checkbox" className="check" aria-label="Chọn tất cả" checked={allPicked} disabled={!rows?.length}
+        ref={(el) => { if (el) el.indeterminate = picked.size > 0 && !allPicked; }}
+        onChange={() => setPicked(allPicked ? new Set() : new Set(rows?.map((r) => r.name)))} />
+    ), render: (r) => (
+      <input type="checkbox" className="check" aria-label={`Chọn ${r.name}`} checked={picked.has(r.name)}
+        onClick={(e) => e.stopPropagation()} onChange={() => toggle(r.name)} />
+    ) },
     { key: "name", title: "Event", sortable: true, render: (r) => (
       <span className="flex min-w-0 items-center gap-1.5" title={r.name}>
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sel === r.name ? "bg-accent" : "bg-transparent"}`} />
-        <span className="truncate font-medium">{r.name}</span>
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${sel === r.name ? "bg-accent" : "bg-transparent"}`} />
+        <span className={`truncate font-medium ${queued.has(r.name) ? "text-dim line-through" : ""}`}>{r.name}</span>
+        {queued.has(r.name) && <span className="badge shrink-0 bg-bad/10 text-bad">chờ xóa</span>}
       </span>
     ) },
     { key: "count", title: "Số lần", sortable: true, num: true, width: "120px", render: (r) => fmt(r.count) },
@@ -136,10 +159,20 @@ export function Events() {
                 </button>
               )}
             </div>
-            <span className="ml-auto text-xs muted">{rows ? `${total.toLocaleString()} loại event` : ""}</span>
+            {picked.size > 0 ? (
+              <span key="sel" className="ml-auto flex animate-fade-in items-center gap-2">
+                <span className="text-xs"><b className="tabular">{picked.size}</b> <span className="muted">đã chọn</span></span>
+                <button className="text-xs muted hover:text-fg" onClick={() => setPicked(new Set())}>Bỏ chọn</button>
+                <button className="btn-danger !h-7" onClick={() => setConfirm([...picked])}><Icon name="trash" size={13} /> Xóa</button>
+              </span>
+            ) : (
+              <span className="ml-auto text-xs muted">{rows ? `${total.toLocaleString()} loại event` : ""}</span>
+            )}
           </>
         }
       />
+
+      {confirm && <DeleteEventsDialog names={confirm} onClose={() => setConfirm(null)} onScheduled={() => setPicked(new Set())} />}
 
       {/* bottom: detail of the selected event */}
       <div ref={detailRef} className="mt-6 scroll-mt-4 border-t border-line pt-5">

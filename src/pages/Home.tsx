@@ -5,7 +5,7 @@ import { fmt } from "../lib/format";
 import { useDash, useLoad } from "../lib/state";
 import { Initials, Page } from "../components/Layout";
 import { Icon } from "../components/Icon";
-import { Badge, ErrorBox, Kpi, Modal, Skeleton } from "../components/ui";
+import { Badge, ErrorBox, Kpi, Modal, SecretKey, Skeleton } from "../components/ui";
 
 function ago(ms: number) {
   if (!ms) return "—";
@@ -32,7 +32,7 @@ export function Home() {
       <ErrorBox error={r.error} />
 
       <h2 className="mb-2 text-[15px] font-semibold">Tổng quan</h2>
-      <div className="mb-8 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
+      <div className="stagger mb-8 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
         <Kpi label="Người dùng" icon="users" value={fmt(tot.users)} loading={loading} />
         <Kpi label="User mới" icon="userPlus" value={fmt(tot.new_users)} loading={loading} />
         <Kpi label="Sessions" icon="layers" value={fmt(tot.sessions)} loading={loading} />
@@ -66,14 +66,14 @@ export function Home() {
             {apps.map((a) => {
               const live = a.last_event_at > 0 && Date.now() - a.last_event_at < 10 * 60_000;
               return (
-                <tr key={a.id} onClick={() => nav(`/app/${a.id}`)} className="cursor-pointer border-b border-line/70 hover:bg-raised">
+                <tr key={a.id} onClick={() => nav(`/app/${a.id}`)} className="animate-fade-in cursor-pointer border-b border-line/70 transition-colors hover:bg-raised">
                   <td className="py-2.5 pr-3">
                     <span className="flex items-center gap-2.5">
                       <Initials name={a.name} size={24} />
                       <span className="font-medium">{a.name}</span>
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs muted">{a.app_key}</td>
+                  <td className="max-w-[260px] px-3 py-1.5 muted"><SecretKey value={a.app_key} /></td>
                   <td className="px-3 py-2.5 text-right tabular">{fmt(a.users)}</td>
                   <td className="px-3 py-2.5 text-right tabular">{fmt(a.new_users)}</td>
                   <td className="px-3 py-2.5 text-right tabular">{fmt(a.sessions)}</td>
