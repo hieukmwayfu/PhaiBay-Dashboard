@@ -1,15 +1,13 @@
 import { Link } from "react-router-dom";
-import { getServerUrl } from "../lib/api";
 import { useDash } from "../lib/state";
 import { Icon } from "../components/Icon";
-import { CopyButton, SecretKey } from "../components/ui";
+import { SecretKey } from "../components/ui";
 
 /** Per-app settings: identity, App key (hidden until the eye is clicked), SDK connection, data tools. */
 export function Settings() {
   const { appId, apps } = useDash();
   const app = apps.find((a) => a.id === appId);
   if (!app) return null;
-  const server = getServerUrl();
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -21,13 +19,7 @@ export function Settings() {
 
       <Section title="App key" desc="Gắn vào Unity SDK để gửi event về app này. Không đổi được sau khi tạo.">
         <Row label="App key"><SecretKey value={app.app_key} /></Row>
-        <Row label="Server">
-          <span className="inline-flex min-w-0 items-center gap-0.5">
-            <code className="truncate font-mono text-xs">{server}</code>
-            <CopyButton text={server} />
-          </span>
-        </Row>
-        <p className="pt-1 text-xs muted">Trong Unity: <b className="text-fg">menu PhaiBay › Settings</b>, dán App key. Server mặc định đã đúng, không cần nhập.</p>
+        <p className="pt-1 text-xs muted">Trong Unity: <b className="text-fg">menu PhaiBay › Settings</b>, dán App key.</p>
       </Section>
 
       <Section title="Dữ liệu" desc="Xóa event rác / event test.">

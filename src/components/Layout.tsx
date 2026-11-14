@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
-import { getServerUrl, storage } from "../lib/api";
+import { storage } from "../lib/api";
 import { DIM_LABEL, OP_LABEL, RANGES, useDash, type RangeKey } from "../lib/state";
 import { AgentPanel } from "./AgentPanel";
 import { DeleteToasts } from "./DeleteEvents";
@@ -112,8 +112,6 @@ function Sidebar({ collapsed, onToggle, onLogout, onNavigate, mobile }: {
     document.documentElement.classList.toggle("dark", v);
     try { localStorage.setItem("pb_theme", v ? "dark" : "light"); } catch { /* ignore */ }
   };
-  let host = "";
-  try { host = new URL(getServerUrl()).host; } catch { /* ignore */ }
 
   return (
     <div className="flex h-full flex-col px-3 py-3">
@@ -140,12 +138,6 @@ function Sidebar({ collapsed, onToggle, onLogout, onNavigate, mobile }: {
       </nav>
 
       <div className="mt-auto flex flex-col gap-px pt-4">
-        {!collapsed && (
-          <div className="mb-1 flex items-center gap-2 px-2 text-xs muted" title={getServerUrl()}>
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-good" />
-            <span className="min-w-0 truncate font-mono">{host || "no server"}</span>
-          </div>
-        )}
         <a href={SDK_GITHUB_URL} target="_blank" rel="noopener noreferrer" title={collapsed ? "Unity SDK trên GitHub" : SDK_GITHUB_URL}
           className={`group flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-fg/80 transition-colors hover:bg-raised ${collapsed ? "justify-center" : ""}`}>
           <Icon name="github" size={16} className="text-dim" />

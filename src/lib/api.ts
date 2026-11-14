@@ -87,7 +87,7 @@ function networkErrorMessage(u: string): string {
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(host);
   return local && !IS_LOCAL_PAGE
     ? `Không kết nối được ${u}. "localhost" là máy đang mở trình duyệt — nếu server ở máy khác hãy dùng link HTTPS của server (vd: Cloudflare tunnel). Nếu trình duyệt hỏi quyền truy cập mạng cục bộ, hãy cho phép.`
-    : `Không kết nối được server ${u} (server tắt, sai địa chỉ, hoặc link tunnel đã đổi).`;
+    : "Không kết nối được server. Kiểm tra mạng rồi thử lại.";
 }
 export function getToken(): string {
   return LS.get("token", "");

@@ -37,7 +37,7 @@ export function Overview() {
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-raised/60 px-4 py-3">
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-semibold">Chưa có event trong khoảng này</div>
-            <div className="text-xs muted">Điền App Key + Server URL vào PhaiBay › Settings trong Unity, rồi xem event realtime ở DebugView.</div>
+            <div className="text-xs muted">Điền App Key vào PhaiBay › Settings trong Unity, rồi xem event realtime ở DebugView.</div>
           </div>
           {app && (
             <div className="flex items-center gap-1 rounded-md border border-line bg-surface py-0.5 pl-2.5 pr-0.5">
