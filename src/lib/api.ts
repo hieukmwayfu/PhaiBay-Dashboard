@@ -51,7 +51,11 @@ export function normalizeServerUrl(u: string): string {
 })();
 
 export function getServerUrl(): string {
-  return LS.get("server", ENV_URL) || ENV_URL;
+  const saved = LS.get("server", ENV_URL);
+  // A saved URL equal to this page's own origin is a leftover from a same-origin build
+  // (e.g. the Vercel host itself, which has no API): fall back to the build default.
+  if (!saved || (saved === location.origin && ENV_URL && ENV_URL !== location.origin)) return ENV_URL;
+  return saved;
 }
 export function setServerUrl(u: string) {
   LS.set("server", normalizeServerUrl(u) || ENV_URL);
